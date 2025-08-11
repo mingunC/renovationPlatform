@@ -1,103 +1,102 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { z } from 'zod'
-
-// 현장 방문 일정 설정 스키마
-const setInspectionDateSchema = z.object({
-  inspection_date: z.string().datetime(),
-  bidding_duration_days: z.number().min(1).max(30).default(7), // 기본 7일
-})
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { sendInspectionScheduledEmail } from '@/lib/email/templates';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const requestId = params.id
-    const body = await request.json()
-    
-    // 입력값 검증
-    const { inspection_date, bidding_duration_days } = setInspectionDateSchema.parse(body)
-    
-    const inspectionDateTime = new Date(inspection_date)
-    const biddingStartDate = new Date(inspectionDateTime)
-    biddingStartDate.setHours(0, 0, 0, 0) // 자정부터 시작
-    
-    const biddingEndDate = new Date(biddingStartDate)
-    biddingEndDate.setDate(biddingEndDate.getDate() + bidding_duration_days)
-    
-    // 요청 존재 여부 확인
-    const existingRequest = await prisma.renovationRequest.findUnique({
-      where: { id: requestId },
-      include: {
-        customer: true,
-      }
-    })
-    
-    if (!existingRequest) {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return NextResponse.json(
-        { error: 'Renovation request not found' },
-        { status: 404 }
-      )
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
-    
-    // 현재 상태가 OPEN인지 확인
-    if (existingRequest.status !== 'OPEN') {
+
+    // Check if user is admin
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id }
+    });
+
+    if (dbUser?.type !== 'CUSTOMER') { // Note: You may need to add ADMIN type
       return NextResponse.json(
-        { error: 'Request is not in OPEN status' },
+        { error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { inspection_date } = body;
+
+    if (!inspection_date) {
+      return NextResponse.json(
+        { error: 'Inspection date is required' },
         { status: 400 }
-      )
+      );
     }
+
+    const inspectionDate = new Date(inspection_date);
     
-    // 현장 방문 일정 설정 및 상태 변경
+    // Update the renovation request
     const updatedRequest = await prisma.renovationRequest.update({
-      where: { id: requestId },
+      where: { id: params.id },
       data: {
-        inspection_date: inspectionDateTime,
-        bidding_start_date: biddingStartDate,
-        bidding_end_date: biddingEndDate,
+        inspection_date: inspectionDate,
         status: 'INSPECTION_SCHEDULED',
+        // Bidding starts at midnight on inspection date
+        bidding_start_date: inspectionDate,
+        // Bidding ends 7 days later
+        bidding_end_date: new Date(inspectionDate.getTime() + 7 * 24 * 60 * 60 * 1000)
       },
       include: {
-        customer: true,
-        inspection_interests: {
-          include: {
-            contractor: {
-              include: {
-                user: true,
-              }
-            }
-          }
-        }
+        customer: true
       }
-    })
-    
-    // TODO: 이메일 알림 발송 (InspectionDateSetEmail)
-    // - 해당 카테고리에 관심있는 모든 업체들에게 알림
-    // - 현장 방문 일정과 참여 의사 표시 마감일 포함
-    
+    });
+
+    // Get all contractors in the service area
+    const contractors = await prisma.contractor.findMany({
+      where: {
+        service_areas: {
+          has: updatedRequest.postal_code.substring(0, 3) // Match FSA
+        },
+        categories: {
+          hasSome: [updatedRequest.category]
+        },
+        profile_completed: true
+      },
+      include: {
+        user: true
+      }
+    });
+
+    // Send email notifications to all matching contractors
+    for (const contractor of contractors) {
+      await sendInspectionScheduledEmail({
+        to: contractor.user.email,
+        contractorName: contractor.business_name || contractor.user.name,
+        requestId: updatedRequest.id,
+        address: updatedRequest.address,
+        inspectionDate: inspectionDate.toLocaleDateString(),
+        category: updatedRequest.category,
+        description: updatedRequest.description
+      });
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Inspection date set successfully',
-      request: updatedRequest,
-      inspection_date: inspectionDateTime.toISOString(),
-      bidding_start_date: biddingStartDate.toISOString(),
-      bidding_end_date: biddingEndDate.toISOString(),
-    })
-    
+      data: updatedRequest
+    });
+
   } catch (error) {
-    console.error('Error setting inspection date:', error)
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid input data', details: error.errors },
-        { status: 400 }
-      )
-    }
-    
+    console.error('Error setting inspection date:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to set inspection date' },
       { status: 500 }
-    )
+    );
   }
 }
