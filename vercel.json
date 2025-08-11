@@ -1,0 +1,18 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/start-bidding",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/close-bidding",
+      "schedule": "0 0 * * *"
+    }
+  ],
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "regions": ["iad1"]
+}

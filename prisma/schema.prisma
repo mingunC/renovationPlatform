@@ -1,0 +1,215 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserType {
+  CUSTOMER
+  CONTRACTOR
+}
+
+enum RenovationCategory {
+  KITCHEN
+  BATHROOM
+  BASEMENT
+  FLOORING
+  PAINTING
+  OTHER
+}
+
+enum BudgetRange {
+  UNDER_50K
+  RANGE_50_100K
+  OVER_100K
+}
+
+enum Timeline {
+  ASAP
+  WITHIN_1MONTH
+  WITHIN_3MONTHS
+  PLANNING
+}
+
+enum RequestStatus {
+  OPEN                    // 기존: 견적 요청 등록됨
+  INSPECTION_SCHEDULED    // 새로 추가: 현장 방문 일정 설정됨
+  BIDDING_OPEN           // 새로 추가: 입찰 진행 중
+  BIDDING_CLOSED         // 새로 추가: 입찰 마감
+  CONTRACTOR_SELECTED    // 새로 추가: 업체 선택됨
+  CLOSED                 // 기존: 마감됨
+  COMPLETED              // 기존: 완료됨
+}
+
+enum BidStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model User {
+  id         String   @id @default(uuid()) @db.Uuid
+  email      String   @unique
+  name       String
+  phone      String?
+  type       UserType
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  contractor         Contractor?
+  renovation_requests RenovationRequest[]
+  reviews_given      Review[] @relation("CustomerReviews")
+
+  @@map("users")
+}
+
+model Contractor {
+  id                String   @id @default(uuid()) @db.Uuid
+  user_id           String   @unique @db.Uuid
+  business_name     String?
+  business_number   String?
+  phone             String?
+  business_license_number String?
+  insurance_document_url String?
+  wsib_certificate_url String?
+  insurance_verified Boolean @default(false)
+  wsib_verified     Boolean @default(false)
+  service_areas     String[]
+  categories        String[]
+  rating            Decimal @default(0) @db.Decimal(3, 2)
+  review_count      Int     @default(0)
+  profile_completed Boolean @default(false)
+  completion_percentage Int  @default(0)
+  skip_verification Boolean @default(false)
+  onboarding_completed_at DateTime?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  // Relations (기존 유지)
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  bids    Bid[]
+  reviews Review[]
+
+  // 새로운 관계 추가
+  selected_requests     RenovationRequest[] @relation("SelectedContractor")
+  inspection_interests  InspectionInterest[] @relation("InspectionInterests")
+
+  @@map("contractors")
+  @@index([user_id])
+  @@index([service_areas])
+  @@index([categories])
+  @@index([profile_completed])
+}
+
+model RenovationRequest {
+  id           String             @id @default(uuid()) @db.Uuid
+  customer_id  String             @db.Uuid
+  category     RenovationCategory
+  budget_range BudgetRange
+  timeline     Timeline
+  postal_code  String
+  address      String
+  description  String             @db.Text
+  photos       String[]
+  status       RequestStatus      @default(OPEN)
+  created_at   DateTime           @default(now())
+
+  // 새로 추가된 필드들 (기존 데이터 호환성 위해 모두 optional)
+  inspection_date         DateTime?  // 현장 방문 예정일
+  bidding_start_date      DateTime?  // 입찰 시작일
+  bidding_end_date        DateTime?  // 입찰 마감일
+  selected_contractor_id  String?    @db.Uuid // 선택된 업체 ID
+
+  // Relations (기존 유지)
+  customer User   @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  bids     Bid[]
+  reviews  Review[]
+
+  // 새로운 관계 추가
+  selected_contractor   Contractor?         @relation("SelectedContractor", fields: [selected_contractor_id], references: [id])
+  inspection_interests  InspectionInterest[]
+
+  @@index([status, category])
+  @@index([postal_code])
+  @@index([created_at])
+  @@index([inspection_date])       // 새로 추가된 인덱스
+  @@index([bidding_start_date])    // 새로 추가된 인덱스
+  @@map("renovation_requests")
+}
+
+model Bid {
+  id              String    @id @default(uuid()) @db.Uuid
+  request_id      String    @db.Uuid
+  contractor_id   String    @db.Uuid
+  labor_cost      Decimal   @db.Decimal(10, 2)
+  material_cost   Decimal   @db.Decimal(10, 2)
+  permit_cost     Decimal   @default(0) @db.Decimal(10, 2)
+  disposal_cost   Decimal   @default(0) @db.Decimal(10, 2)
+  total_amount    Decimal   @db.Decimal(10, 2)
+  timeline_weeks  Int
+  start_date      DateTime?
+  included_items  String?   @db.Text
+  excluded_items  String?   @db.Text
+  notes           String?   @db.Text
+  status          BidStatus @default(PENDING)
+  created_at      DateTime  @default(now())
+
+  // Relations
+  request    RenovationRequest @relation(fields: [request_id], references: [id], onDelete: Cascade)
+  contractor Contractor        @relation(fields: [contractor_id], references: [id], onDelete: Cascade)
+
+  @@unique([request_id, contractor_id])
+  @@index([status])
+  @@index([contractor_id])
+  @@index([created_at])
+  @@map("bids")
+}
+
+model Review {
+  id            String   @id @default(uuid()) @db.Uuid
+  contractor_id String   @db.Uuid
+  customer_id   String   @db.Uuid
+  request_id    String   @db.Uuid
+  rating        Int      @db.SmallInt
+  comment       String?  @db.Text
+  created_at    DateTime @default(now())
+
+  // Relations
+  contractor Contractor        @relation(fields: [contractor_id], references: [id], onDelete: Cascade)
+  customer   User              @relation("CustomerReviews", fields: [customer_id], references: [id], onDelete: Cascade)
+  request    RenovationRequest @relation(fields: [request_id], references: [id], onDelete: Cascade)
+
+  @@unique([request_id, customer_id])
+  @@index([contractor_id])
+  @@index([rating])
+  @@index([created_at])
+  @@map("reviews")
+}
+
+// 새로 추가된 테이블: 현장 방문 참여 의사 표시
+model InspectionInterest {
+  id                String    @id @default(uuid()) @db.Uuid
+  request_id        String    @db.Uuid
+  contractor_id     String    @db.Uuid  
+  will_participate  Boolean   // true: 참여, false: 불참
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  // 기존 테이블과의 관계
+  request           RenovationRequest @relation(fields: [request_id], references: [id], onDelete: Cascade)
+  contractor        Contractor @relation("InspectionInterests", fields: [contractor_id], references: [id], onDelete: Cascade)
+
+  @@unique([request_id, contractor_id]) // 업체별 요청당 1번만 참여 의사 표시
+  @@index([request_id])
+  @@index([contractor_id])
+  @@index([will_participate])
+  @@map("inspection_interests")
+}
