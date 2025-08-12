@@ -93,7 +93,7 @@ export function DetailsStep({ description, photos, onUpdate }: DetailsStepProps)
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  const isDescriptionValid = description.length >= 50
+  const isDescriptionValid = description.length >= 10
 
   return (
     <div className="space-y-6">
@@ -122,8 +122,8 @@ export function DetailsStep({ description, photos, onUpdate }: DetailsStepProps)
               className={`resize-none ${!isDescriptionValid && description.length > 0 ? 'border-red-500' : isDescriptionValid ? 'border-green-500' : ''}`}
             />
             <div className="flex items-center justify-between text-sm">
-              <span className={description.length < 50 ? 'text-red-600' : 'text-green-600'}>
-                {description.length}/50 characters minimum
+              <span className={description.length < 10 ? 'text-red-600' : 'text-green-600'}>
+                {description.length}/10 characters minimum
               </span>
               {isDescriptionValid && (
                 <span className="text-green-600 flex items-center">

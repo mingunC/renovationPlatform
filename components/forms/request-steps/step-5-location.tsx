@@ -1,16 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface LocationStepProps {
   postalCode: string
   address: string
   city: string
-  onUpdate: (data: { postal_code: string; address: string; city: string }) => void
+  inspectionDate: string
+  onUpdate: (data: { postal_code: string; address: string; city: string; inspection_date: string }) => void
 }
 
 // Canadian postal code validation
@@ -198,9 +201,13 @@ const getCityFromPostalCode = (postalCode: string): string => {
   return ''
 }
 
-export function LocationStep({ postalCode, address, city, onUpdate }: LocationStepProps) {
+export function LocationStep({ postalCode, address, city, inspectionDate, onUpdate }: LocationStepProps) {
   const [postalCodeError, setPostalCodeError] = useState<string | null>(null)
   const [addressError, setAddressError] = useState<string | null>(null)
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState<string>(inspectionDate)
+  const calendarRef = useRef<HTMLDivElement>(null)
 
   const handlePostalCodeChange = (value: string) => {
     // Remove spaces and non-alphanumeric characters, then convert to uppercase
@@ -247,6 +254,62 @@ export function LocationStep({ postalCode, address, city, onUpdate }: LocationSt
   const isPostalCodeValid = validateCanadianPostalCode(postalCode)
   const isAddressValid = address.length >= 10
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
+        setIsCalendarOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const daysInMonth = lastDay.getDate()
+    const startingDay = firstDay.getDay()
+    
+    return { daysInMonth, startingDay, year, month }
+  }
+
+  const goToPreviousMonth = () => {
+    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+  }
+
+  const goToNextMonth = () => {
+    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+  }
+
+  const selectDate = (day: number) => {
+    const selectedDateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
+    const formattedDate = selectedDateObj.toISOString().split('T')[0]
+    setSelectedDate(formattedDate)
+    onUpdate({ postal_code: postalCode, address, city, inspection_date: formattedDate })
+    setIsCalendarOpen(false)
+  }
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long'
+    })
+  }
+
+  const { daysInMonth, startingDay, year, month } = getDaysInMonth(currentDate)
+  const monthNames = [
+    '1월', '2월', '3월', '4월', '5월', '6월',
+    '7월', '8월', '9월', '10월', '11월', '12월'
+  ]
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토']
+
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -286,17 +349,7 @@ export function LocationStep({ postalCode, address, city, onUpdate }: LocationSt
             )}
           </div>
 
-          {city && (
-            <Alert>
-              <AlertDescription className="flex items-center">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Detected city: <strong>{city}</strong>
-              </AlertDescription>
-            </Alert>
-          )}
+
 
           <div className="space-y-2">
             <Label htmlFor="address" className="text-base font-medium">
@@ -324,6 +377,143 @@ export function LocationStep({ postalCode, address, city, onUpdate }: LocationSt
             <p className="text-sm text-gray-500">
               Include street number, street name, and unit/apartment number if applicable
             </p>
+          </div>
+
+          {/* Inspection Date Section */}
+          <div className="space-y-2">
+            <Label htmlFor="inspection-date" className="text-base font-medium">
+              실측 가능일이 언제인가요? *
+            </Label>
+            <p className="text-sm text-gray-500">
+              When can we schedule the inspection? *
+            </p>
+            <div className="relative">
+              <Input
+                id="inspection-date"
+                type="text"
+                placeholder="날짜를 선택해 주세요."
+                value={formatDate(selectedDate)}
+                readOnly
+                className="cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+                onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+              />
+
+              {/* Calendar Dropdown */}
+              {isCalendarOpen && (
+                <div
+                  ref={calendarRef}
+                  className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg p-4 shadow-lg z-10 mt-2"
+                >
+                  {/* Calendar Header */}
+                  <div className="flex justify-between items-center mb-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={goToPreviousMonth}
+                      className="p-2 hover:bg-gray-100"
+                    >
+                      ‹
+                    </Button>
+                    <div className="font-semibold text-gray-900">
+                      {year}년 {monthNames[month]}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={goToNextMonth}
+                      className="p-2 hover:bg-gray-100"
+                    >
+                      ›
+                    </Button>
+                  </div>
+
+                  {/* Calendar Days */}
+                  <div className="grid grid-cols-7 gap-1 mb-4">
+                    {dayNames.map(day => (
+                      <div key={day} className="text-center text-sm text-gray-500 py-2">
+                        {day}
+                      </div>
+                    ))}
+                    
+                    {/* Empty cells for starting days */}
+                    {Array.from({ length: startingDay }).map((_, index) => (
+                      <div key={`empty-${index}`} className="py-2" />
+                    ))}
+                    
+                    {/* Days of the month */}
+                    {Array.from({ length: daysInMonth }).map((_, index) => {
+                      const day = index + 1
+                      const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                      const isSelected = selectedDate === dateString
+                      const isToday = dateString === new Date().toISOString().split('T')[0]
+                      const isPast = new Date(dateString) < new Date()
+                      
+                      return (
+                        <button
+                          key={day}
+                          onClick={() => !isPast && selectDate(day)}
+                          disabled={isPast}
+                          className={cn(
+                            "py-2 rounded-md text-sm transition-colors",
+                            isSelected && "bg-blue-500 text-white font-semibold",
+                            !isSelected && !isPast && "hover:bg-gray-100",
+                            isToday && !isSelected && "bg-blue-100 text-blue-600 font-semibold",
+                            isPast && "text-gray-300 cursor-not-allowed"
+                          )}
+                        >
+                          {day}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Close Button */}
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCalendarOpen(false)}
+                    className="w-full"
+                  >
+                    닫기
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Info Box */}
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-md">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                <span className="text-blue-500 mr-2">💡</span>
+                <span className="ko">
+                  인테리어는 공사현장 실측이 진행되어야 더욱 정확한 견적 제공이 가능하며 
+                  공사 진행 시 추가비용 발생과 하자 발생률이 낮아집니다.
+                </span>
+              </p>
+              <p className="text-xs text-gray-600 mt-2 italic">
+                On-site inspection is essential for accurate interior renovation quotes and helps reduce 
+                additional costs and defects during construction.
+              </p>
+            </div>
+
+            {/* Selection Confirmation or Error */}
+            {selectedDate ? (
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <p className="text-green-800 font-medium">
+                  선택된 실측일: {formatDate(selectedDate)}
+                </p>
+                <p className="text-green-600 text-sm mt-1">
+                  Selected inspection date: {formatDate(selectedDate)}
+                </p>
+              </div>
+            ) : (
+              <div className="text-center p-4 bg-red-50 rounded-lg">
+                <p className="text-red-800 font-medium">
+                  실측 가능일을 선택해주세요
+                </p>
+                <p className="text-red-600 text-sm mt-1">
+                  Please select an inspection date
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

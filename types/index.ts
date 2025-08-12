@@ -31,7 +31,10 @@ export type ReviewWithDetails = Review & {
   request: RenovationRequest
 }
 
+export type PropertyType = 'DETACHED_HOUSE' | 'TOWNHOUSE' | 'CONDO' | 'COMMERCIAL'
+
 export interface CreateRenovationRequestData {
+  property_type: PropertyType
   category: string
   budget_range: string
   timeline: string
@@ -39,6 +42,7 @@ export interface CreateRenovationRequestData {
   address: string
   description: string
   photos: string[]
+  inspection_date: string
 }
 
 export interface CreateBidData {
@@ -72,9 +76,11 @@ export interface DashboardStats {
 }
 
 export interface SearchFilters {
+  property_type?: PropertyType
   category?: string
   budget_range?: string
   timeline?: string
   postal_code?: string
   status?: string
+  inspection_date?: string
 }

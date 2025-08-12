@@ -204,6 +204,7 @@ export async function POST(request: NextRequest) {
     const newRequest = await prisma.renovationRequest.create({
       data: {
         customer_id: user.id,
+        property_type: validatedData.property_type,
         category: validatedData.category,
         budget_range: validatedData.budget_range,
         timeline: validatedData.timeline,
@@ -211,6 +212,7 @@ export async function POST(request: NextRequest) {
         address: validatedData.address.trim(),
         description: validatedData.description.trim(),
         photos: validatedData.photos || [],
+        inspection_date: validatedData.inspection_date || null,
         status: 'OPEN',
       },
       include: {

@@ -14,7 +14,6 @@ async function getDashboardMetrics() {
   return {
     newRequestsThisWeek: 12,
     activeBids: 8,
-    winRate: 35,
     estimatedRevenue: 47500,
   }
 }
@@ -109,7 +108,7 @@ export default async function ContractorDashboard() {
               <ul className="text-sm text-blue-800 space-y-1">
                 <li>• Submit competitive bids within 24 hours for better visibility</li>
                 <li>• Include detailed breakdowns to build customer trust</li>
-                <li>• Respond quickly to customer questions to improve your win rate</li>
+                <li>• Respond quickly to customer questions to build strong relationships</li>
                 <li>• Update your profile with recent work photos and certifications</li>
               </ul>
             </div>

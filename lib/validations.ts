@@ -11,13 +11,15 @@ export const userSchema = z.object({
 
 // Request Schemas
 export const createRequestSchema = z.object({
+  property_type: z.enum(['DETACHED_HOUSE', 'TOWNHOUSE', 'CONDO', 'COMMERCIAL']),
   category: z.enum(['KITCHEN', 'BATHROOM', 'BASEMENT', 'FLOORING', 'PAINTING', 'OTHER']),
   budget_range: z.enum(['UNDER_50K', 'RANGE_50_100K', 'OVER_100K']),
   timeline: z.enum(['ASAP', 'WITHIN_1MONTH', 'WITHIN_3MONTHS', 'PLANNING']),
   postal_code: z.string().regex(/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/, 'Invalid Canadian postal code'),
   address: z.string().min(10, 'Address must be at least 10 characters'),
-  description: z.string().min(50, 'Description must be at least 50 characters'),
+  description: z.string().min(10, 'Description must be at least 10 characters'),
   photos: z.array(z.string()).max(5, 'Maximum 5 photos allowed').optional(),
+  inspection_date: z.string().min(1, 'Inspection date is required'),
 })
 
 export const updateRequestSchema = z.object({
@@ -27,12 +29,14 @@ export const updateRequestSchema = z.object({
 })
 
 export const requestFiltersSchema = z.object({
+  property_type: z.enum(['DETACHED_HOUSE', 'TOWNHOUSE', 'CONDO', 'COMMERCIAL']).optional(),
   status: z.enum(['OPEN', 'CLOSED', 'COMPLETED']).optional(),
   category: z.enum(['KITCHEN', 'BATHROOM', 'BASEMENT', 'FLOORING', 'PAINTING', 'OTHER']).optional(),
   budget_range: z.enum(['UNDER_50K', 'RANGE_50_100K', 'OVER_100K']).optional(),
   timeline: z.enum(['ASAP', 'WITHIN_1MONTH', 'WITHIN_3MONTHS', 'PLANNING']).optional(),
   postal_code: z.string().optional(),
   customer_id: z.string().uuid().optional(),
+  inspection_date: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   sort_by: z.enum(['created_at', 'budget_range', 'timeline']).default('created_at'),

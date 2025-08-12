@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 interface MetricsData {
   newRequestsThisWeek: number
   activeBids: number
-  winRate: number
   estimatedRevenue: number
 }
 
@@ -41,15 +40,6 @@ export function MetricsCards({ data }: MetricsCardsProps) {
       trend: 'neutral',
       bgColor: 'bg-orange-50',
       iconColor: 'text-orange-600',
-    },
-    {
-      title: 'Win Rate',
-      value: `${data.winRate}%`,
-      icon: '🎯',
-      description: 'Success percentage',
-      trend: data.winRate >= 50 ? 'positive' : data.winRate >= 30 ? 'neutral' : 'negative',
-      bgColor: 'bg-green-50',
-      iconColor: 'text-green-600',
     },
     {
       title: 'Estimated Revenue',

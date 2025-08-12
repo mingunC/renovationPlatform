@@ -7,11 +7,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useMultiStepForm } from '@/hooks/use-multi-step-form'
 
 // Step Components
-import { ProjectTypeStep } from './request-steps/step-1-project-type'
-import { BudgetRangeStep } from './request-steps/step-2-budget-range'
-import { TimelineStep } from './request-steps/step-3-timeline'
-import { LocationStep } from './request-steps/step-4-location'
-import { DetailsStep } from './request-steps/step-5-details'
+import { PropertyTypeStep } from './request-steps/step-1-property-type'
+import { RenovationCategoryStep } from './request-steps/step-2-renovation-category'
+import { BudgetRangeStep } from './request-steps/step-3-budget-range'
+import { TimelineStep } from './request-steps/step-4-timeline'
+import { LocationStep } from './request-steps/step-5-location'
+import { DetailsStep } from './request-steps/step-6-details'
 import { StepProgress } from './request-steps/step-progress'
 import { StepNavigation } from './request-steps/step-navigation'
 
@@ -54,12 +55,14 @@ export function MultiStepRequestForm() {
 
       // Prepare the request data
       const requestData = {
+        property_type: formData.property_type,
         category: formData.category,
         budget_range: formData.budget_range,
         timeline: formData.timeline,
         postal_code: formData.postal_code,
         address: formData.address,
         description: formData.description,
+        inspection_date: formData.inspection_date,
         photos: photoData, // Send as base64 strings
       }
 
@@ -93,35 +96,43 @@ export function MultiStepRequestForm() {
     switch (currentStep) {
       case 1:
         return (
-          <ProjectTypeStep
-            selectedType={formData.category}
-            onSelect={(type) => updateFormData({ category: type })}
+          <PropertyTypeStep
+            selectedType={formData.property_type}
+            onSelect={(type) => updateFormData({ property_type: type })}
           />
         )
       case 2:
+        return (
+          <RenovationCategoryStep
+            selectedCategory={formData.category}
+            onSelect={(category) => updateFormData({ category: category })}
+          />
+        )
+      case 3:
         return (
           <BudgetRangeStep
             selectedBudget={formData.budget_range}
             onSelect={(budget) => updateFormData({ budget_range: budget })}
           />
         )
-      case 3:
+      case 4:
         return (
           <TimelineStep
             selectedTimeline={formData.timeline}
             onSelect={(timeline) => updateFormData({ timeline: timeline })}
           />
         )
-      case 4:
+      case 5:
         return (
           <LocationStep
             postalCode={formData.postal_code}
             address={formData.address}
             city={formData.city}
+            inspectionDate={formData.inspection_date}
             onUpdate={(data) => updateFormData(data)}
           />
         )
-      case 5:
+      case 6:
         return (
           <DetailsStep
             description={formData.description}

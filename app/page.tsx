@@ -14,14 +14,6 @@ export default function HomePage() {
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Connect homeowners with trusted renovation contractors. Get quotes, compare bids, and transform your home with confidence.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg">
-              <Link href="/register">Get Started</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="/login">Sign In</Link>
-            </Button>
-          </div>
         </div>
 
         {/* Features Section */}
