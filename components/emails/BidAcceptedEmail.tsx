@@ -80,7 +80,7 @@ export function BidAcceptedEmail({ contractorName, bid, customer, request }: Bid
       {/* Success Message */}
       <Section style={successSection}>
         <Text style={successMessage}>
-          🎯 You've successfully won the {formatCategory(request.category)} renovation project!
+          🎯 You&apos;ve successfully won the {formatCategory(request.category)} renovation project!
         </Text>
       </Section>
 
@@ -227,7 +227,7 @@ export function BidAcceptedEmail({ contractorName, bid, customer, request }: Bid
 
       {/* Next Steps */}
       <Section>
-        <Text style={sectionTitle}>🚀 What's Next?</Text>
+        <Text style={sectionTitle}>🚀 What&apos;s Next?</Text>
         <Text style={listItem}>📞 <strong>Contact the customer</strong> within 24 hours to confirm details</Text>
         <Text style={listItem}>📅 <strong>Schedule a kickoff meeting</strong> to review the project scope</Text>
         <Text style={listItem}>📋 <strong>Finalize project timeline</strong> and confirm the start date</Text>
@@ -252,7 +252,7 @@ export function BidAcceptedEmail({ contractorName, bid, customer, request }: Bid
       <Section style={paymentSection}>
         <Text style={paymentTitle}>💳 Payment Information</Text>
         <Text style={paymentText}>
-          Payment will be processed through our secure platform. You'll receive payment milestones 
+          Payment will be processed through our secure platform. You&apos;ll receive payment milestones 
           as agreed upon with the customer. All transactions are protected by our guarantee policy.
         </Text>
       </Section>
@@ -261,8 +261,8 @@ export function BidAcceptedEmail({ contractorName, bid, customer, request }: Bid
       <Section style={supportSection}>
         <Text style={supportTitle}>🛠️ Need Support?</Text>
         <Text style={supportText}>
-          Our team is here to help ensure your project's success. If you have any questions 
-          or need assistance, don't hesitate to reach out.
+           Our team is here to help ensure your project&apos;s success. If you have any questions 
+          or need assistance, don&apos;t hesitate to reach out.
         </Text>
       </Section>
 

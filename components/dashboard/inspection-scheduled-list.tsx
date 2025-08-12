@@ -50,6 +50,12 @@ export function InspectionScheduledList() {
   const handleInspectionInterest = async (requestId: string, willParticipate: boolean) => {
     setSubmittingInterest(requestId)
     try {
+      // Mock 데이터인 경우 시뮬레이션된 API 호출
+      if (requestId.startsWith('mock-')) {
+        // Mock 환경에서는 실제 API 호출로 처리 (Mock 엔드포인트가 처리함)
+        // fallthrough to actual API call
+      }
+
       const response = await fetch('/api/contractor/inspection-interest', {
         method: 'POST',
         headers: {
@@ -62,16 +68,80 @@ export function InspectionScheduledList() {
       })
 
       if (response.ok) {
-        // 성공적으로 제출된 경우 목록 새로고침
-        await fetchInspectionRequests()
+        // 성공적으로 제출된 경우
+        const successMessage = willParticipate ? '✅ 현장 방문 참여가 확정되었습니다!' : '❌ 현장 방문 불참으로 등록되었습니다.'
+        
+        // 성공 알림 표시
+        const notification = document.createElement('div')
+        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300'
+        notification.textContent = successMessage
+        document.body.appendChild(notification)
+        
+        // 3초 후 알림 제거
+        setTimeout(() => {
+          notification.style.opacity = '0'
+          setTimeout(() => {
+            document.body.removeChild(notification)
+          }, 300)
+        }, 3000)
+        
+        await fetchInspectionRequests() // 목록 새로고침
       } else {
         const errorData = await response.json()
         console.error('Error submitting inspection interest:', errorData)
-        // TODO: 에러 토스트 표시
+        
+        // 구체적인 에러 메시지 표시
+        let errorMessage = '참여 의사 등록 중 오류가 발생했습니다.'
+        
+        if (response.status === 401) {
+          errorMessage = '로그인이 필요합니다. 다시 로그인해 주세요.'
+        } else if (response.status === 404) {
+          if (errorData.error?.includes('Contractor profile')) {
+            errorMessage = '업체 프로필이 없습니다. 업체 등록을 완료해 주세요.'
+          } else {
+            errorMessage = '요청을 찾을 수 없습니다.'
+          }
+        } else if (response.status === 400) {
+          if (errorData.error?.includes('not accepting inspection')) {
+            errorMessage = '현재 현장 방문 참여 접수가 마감되었습니다.'
+          } else if (errorData.error?.includes('date has already passed')) {
+            errorMessage = '현장 방문 일정이 이미 지났습니다.'
+          } else if (errorData.error?.includes('does not handle this category')) {
+            errorMessage = '이 카테고리는 귀하의 전문 분야가 아닙니다.'
+          } else {
+            errorMessage = errorData.error || '잘못된 요청입니다.'
+          }
+        }
+        
+        // 에러 알림 표시
+        const errorNotification = document.createElement('div')
+        errorNotification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300'
+        errorNotification.textContent = errorMessage
+        document.body.appendChild(errorNotification)
+        
+        // 5초 후 알림 제거
+        setTimeout(() => {
+          errorNotification.style.opacity = '0'
+          setTimeout(() => {
+            document.body.removeChild(errorNotification)
+          }, 300)
+        }, 5000)
       }
     } catch (error) {
       console.error('Error submitting inspection interest:', error)
-      // TODO: 네트워크 에러 토스트 표시
+      // 네트워크 에러 알림 표시
+      const networkErrorNotification = document.createElement('div')
+      networkErrorNotification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300'
+      networkErrorNotification.textContent = '네트워크 오류가 발생했습니다. 인터넷 연결을 확인해 주세요.'
+      document.body.appendChild(networkErrorNotification)
+      
+      // 5초 후 알림 제거
+      setTimeout(() => {
+        networkErrorNotification.style.opacity = '0'
+        setTimeout(() => {
+          document.body.removeChild(networkErrorNotification)
+        }, 300)
+      }, 5000)
     } finally {
       setSubmittingInterest(null)
     }

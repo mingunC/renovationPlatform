@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
-import { sendInspectionScheduledEmail } from '@/lib/email/templates';
+import { createSupabaseServerClient } from '@/lib/supabase';
+import { emailService } from '@/lib/email-service';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient();
+    const supabase = await createSupabaseServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -31,6 +31,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    const { id } = await params;
     const { inspection_date } = body;
 
     if (!inspection_date) {
@@ -44,7 +45,7 @@ export async function PATCH(
     
     // Update the renovation request
     const updatedRequest = await prisma.renovationRequest.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         inspection_date: inspectionDate,
         status: 'INSPECTION_SCHEDULED',
@@ -76,15 +77,12 @@ export async function PATCH(
 
     // Send email notifications to all matching contractors
     for (const contractor of contractors) {
-      await sendInspectionScheduledEmail({
-        to: contractor.user.email,
-        contractorName: contractor.business_name || contractor.user.name,
-        requestId: updatedRequest.id,
-        address: updatedRequest.address,
-        inspectionDate: inspectionDate.toLocaleDateString(),
-        category: updatedRequest.category,
-        description: updatedRequest.description
-      });
+      await emailService.sendInspectionInvitationEmail(
+        contractor.user.email,
+        contractor.business_name || contractor.user.name,
+        updatedRequest,
+        inspectionDate
+      )
     }
 
     return NextResponse.json({

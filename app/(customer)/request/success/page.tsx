@@ -6,8 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
+interface RequestData {
+  category: string
+  budget_range: string
+  timeline: string
+  postal_code: string
+  description: string
+  photos?: string[]
+}
+
 function SuccessContent() {
-  const [requestData, setRequestData] = useState<any>(null)
+  const [requestData, setRequestData] = useState<RequestData | null>(null)
   const [loading, setLoading] = useState(true)
   const searchParams = useSearchParams()
   const router = useRouter()

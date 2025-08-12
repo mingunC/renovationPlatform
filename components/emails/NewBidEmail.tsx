@@ -77,7 +77,7 @@ export function NewBidEmail({ customerName, bid, contractor, request }: NewBidEm
       {/* Hero Section */}
       <Section style={heroSection}>
         <Text style={heroTitle}>
-          🎉 Great News! You've Received a New Bid
+          🎉 Great News! You&apos;ve Received a New Bid
         </Text>
         <Text style={heroSubtitle}>
           A qualified contractor has submitted a proposal for your {formatCategory(request.category)} renovation
@@ -88,7 +88,7 @@ export function NewBidEmail({ customerName, bid, contractor, request }: NewBidEm
       <Section>
         <Text style={greeting}>Hello {customerName},</Text>
         <Text style={bodyText}>
-          Excellent! You've received a new bid for your renovation project. 
+          Excellent! You&apos;ve received a new bid for your renovation project. 
           Take your time to review the details and compare it with other proposals.
         </Text>
       </Section>
@@ -213,12 +213,12 @@ export function NewBidEmail({ customerName, bid, contractor, request }: NewBidEm
 
       {/* Project Scope */}
       <Section style={cardSection}>
-        <Text style={cardTitle}>📋 What's Included</Text>
+        <Text style={cardTitle}>📋 What&apos;s Included</Text>
         <Text style={scopeText}>{bid.included_items}</Text>
 
         {bid.excluded_items && (
           <>
-            <Text style={cardTitle}>❌ What's Not Included</Text>
+            <Text style={cardTitle}>❌ What&apos;s Not Included</Text>
             <Text style={scopeText}>{bid.excluded_items}</Text>
           </>
         )}
@@ -250,7 +250,7 @@ export function NewBidEmail({ customerName, bid, contractor, request }: NewBidEm
         <Text style={listItem}>🔍 Review the bid details carefully</Text>
         <Text style={listItem}>📊 Compare with other bids you receive</Text>
         <Text style={listItem}>❓ Contact the contractor if you have questions</Text>
-        <Text style={listItem}>✅ Accept the bid when you're ready to proceed</Text>
+        <Text style={listItem}>✅ Accept the bid when you&apos;re ready to proceed</Text>
         <Text style={listItem}>🤝 Schedule a kickoff meeting with your chosen contractor</Text>
       </Section>
 

@@ -17,15 +17,16 @@ import {
 interface BaseEmailTemplateProps {
   children: React.ReactNode
   previewText?: string
+  title?: string
 }
 
-export function BaseEmailTemplate({ children, previewText }: BaseEmailTemplateProps) {
+export function BaseEmailTemplate({ children, previewText, title }: BaseEmailTemplateProps) {
   const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
 
   return (
     <Html>
       <Head>
-        <title>Renovate Platform</title>
+        <title>{title || 'Renovate Platform'}</title>
         {previewText && <meta name="description" content={previewText} />}
       </Head>
       <Body style={main}>

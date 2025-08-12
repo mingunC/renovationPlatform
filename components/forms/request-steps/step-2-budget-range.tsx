@@ -4,12 +4,21 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 
+type BudgetId = 'UNDER_50K' | 'RANGE_50_100K' | 'OVER_100K'
+
 interface BudgetRangeStepProps {
   selectedBudget: string | null
-  onSelect: (budget: 'UNDER_50K' | 'RANGE_50_100K' | 'OVER_100K') => void
+  onSelect: (budget: BudgetId) => void
 }
 
-const BUDGET_OPTIONS = [
+const BUDGET_OPTIONS: ReadonlyArray<{
+  id: BudgetId
+  title: string
+  description: string
+  examples: string
+  icon: string
+  popular: boolean
+}> = [
   {
     id: 'UNDER_50K',
     title: 'Under $50,000',
@@ -61,7 +70,7 @@ export function BudgetRangeStep({ selectedBudget, onSelect }: BudgetRangeStepPro
                 ? 'ring-2 ring-blue-500 bg-blue-50'
                 : 'hover:bg-gray-50'
             }`}
-            onClick={() => onSelect(option.id as any)}
+            onClick={() => onSelect(option.id)}
           >
             <CardContent className="p-6">
               <div className="flex items-start space-x-4">

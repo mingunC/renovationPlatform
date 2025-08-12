@@ -8,7 +8,7 @@ export class APIError extends Error {
   constructor(
     message: string,
     public statusCode: number = 500,
-    public details?: Record<string, any>
+    public details?: Record<string, unknown>
   ) {
     super(message)
     this.name = 'APIError'
@@ -16,7 +16,7 @@ export class APIError extends Error {
 }
 
 export class ValidationError extends APIError {
-  constructor(message: string, details?: Record<string, any>) {
+  constructor(message: string, details?: Record<string, unknown>) {
     super(message, 400, details)
     this.name = 'ValidationError'
   }
@@ -84,7 +84,7 @@ export function createErrorResponse(error: unknown) {
 
   // Prisma errors
   if (error && typeof error === 'object' && 'code' in error) {
-    const prismaError = error as any
+    const prismaError = error as { code?: string; meta?: Record<string, unknown> }
     
     switch (prismaError.code) {
       case 'P2002':
@@ -125,7 +125,7 @@ export function createErrorResponse(error: unknown) {
   )
 }
 
-export function createSuccessResponse(data: any, status: number = 200) {
+export function createSuccessResponse<T extends Record<string, unknown>>(data: T, status: number = 200) {
   return NextResponse.json(
     {
       ...data,
@@ -215,26 +215,27 @@ export function createOrderBy(sortBy: string, sortOrder: 'asc' | 'desc') {
 }
 
 // Data transformation utilities
-export function sanitizeUser(user: any) {
+export function sanitizeUser<T extends Record<string, unknown> & { password?: unknown }>(user: T) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password, ...sanitized } = user
-  return sanitized
+  return sanitized as Omit<T, 'password'>
 }
 
-export function sanitizeRequest(request: any) {
+export function sanitizeRequest<T extends Record<string, unknown> & { customer?: Record<string, unknown> | null }>(request: T) {
   return {
     ...request,
-    customer: request.customer ? sanitizeUser(request.customer) : null,
+    customer: request.customer ? sanitizeUser(request.customer as Record<string, unknown> & { password?: unknown }) : null,
   }
 }
 
-export function sanitizeBid(bid: any) {
+export function sanitizeBid<T extends Record<string, unknown> & { contractor?: { user: Record<string, unknown> & { password?: unknown } } | null; request?: Record<string, unknown> | null }>(bid: T) {
   return {
     ...bid,
     contractor: bid.contractor ? {
       ...bid.contractor,
       user: sanitizeUser(bid.contractor.user),
     } : null,
-    request: bid.request ? sanitizeRequest(bid.request) : null,
+    request: bid.request ? sanitizeRequest(bid.request as Record<string, unknown> & { customer?: Record<string, unknown> | null }) : null,
   }
 }
 

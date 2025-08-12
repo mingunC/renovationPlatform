@@ -180,7 +180,7 @@ export function InspectionParticipation() {
               Confirmed Inspections
             </CardTitle>
             <CardDescription>
-              You've confirmed participation for these site visits
+              You&apos;ve confirmed participation for these site visits
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

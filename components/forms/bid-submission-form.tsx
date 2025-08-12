@@ -29,7 +29,12 @@ type BidFormData = z.infer<typeof bidSchema>
 
 interface BidSubmissionFormProps {
   requestId: string
-  requestData?: any
+  requestData?: {
+    category: string
+    budget_range: string
+    postal_code: string
+    description: string
+  }
 }
 
 export function BidSubmissionForm({ requestId, requestData }: BidSubmissionFormProps) {

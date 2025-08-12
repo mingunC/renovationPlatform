@@ -218,7 +218,7 @@ export function InspectionDateSetEmail({
           <ol style={{ color: '#6b7280', lineHeight: '1.6', paddingLeft: '20px' }}>
             <li>Confirm your participation using the buttons above</li>
             <li>If participating, attend the scheduled inspection</li>
-            <li>After inspection, you'll have 7 days to submit your bid</li>
+            <li>After inspection, you&apos;ll have 7 days to submit your bid</li>
             <li>Customer will review all bids and select their preferred contractor</li>
           </ol>
         </div>

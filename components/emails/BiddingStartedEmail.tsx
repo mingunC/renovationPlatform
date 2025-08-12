@@ -192,7 +192,7 @@ export function BiddingStartedEmail({
             <li><strong>Be Detailed:</strong> Break down labor, materials, and additional costs clearly</li>
             <li><strong>Be Realistic:</strong> Provide accurate timelines based on your inspection</li>
             <li><strong>Be Competitive:</strong> {participatingContractors - 1} other contractors are bidding</li>
-            <li><strong>Be Professional:</strong> Include what's included and excluded in your quote</li>
+            <li><strong>Be Professional:</strong> Include what&apos;s included and excluded in your quote</li>
             <li><strong>Be Prompt:</strong> Early submissions often get more attention from customers</li>
           </ul>
         </div>

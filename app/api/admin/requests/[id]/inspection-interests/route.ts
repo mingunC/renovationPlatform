@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const requestId = params.id
+    const { id: requestId } = await params
     
     // 요청 존재 여부 및 현장 방문 일정 확인
     const renovationRequest = await prisma.renovationRequest.findUnique({
@@ -106,11 +106,11 @@ export async function GET(
 
 // 참여 의사 수정/삭제 (관리자용)
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const requestId = params.id
+    const { id: requestId } = await params
     const { searchParams } = new URL(request.url)
     const contractorId = searchParams.get('contractor_id')
     
