@@ -16,6 +16,14 @@ enum UserType {
   CONTRACTOR
 }
 
+// Updated PropertyType enum
+enum PropertyType {
+  DETACHED_HOUSE  // 단독주택 (이전 HOUSE)
+  TOWNHOUSE       // 타운하우스
+  CONDO           // 콘도
+  COMMERCIAL      // 상업용 부동산
+}
+
 enum RenovationCategory {
   KITCHEN
   BATHROOM
@@ -110,17 +118,18 @@ model Contractor {
 }
 
 model RenovationRequest {
-  id           String             @id @default(uuid()) @db.Uuid
-  customer_id  String             @db.Uuid
-  category     RenovationCategory
-  budget_range BudgetRange
-  timeline     Timeline
-  postal_code  String
-  address      String
-  description  String             @db.Text
-  photos       String[]
-  status       RequestStatus      @default(OPEN)
-  created_at   DateTime           @default(now())
+  id            String             @id @default(uuid()) @db.Uuid
+  customer_id   String             @db.Uuid
+  property_type PropertyType       // 부동산 유형 필드 추가
+  category      RenovationCategory
+  budget_range  BudgetRange
+  timeline      Timeline
+  postal_code   String
+  address       String
+  description   String             @db.Text
+  photos        String[]
+  status        RequestStatus      @default(OPEN)
+  created_at    DateTime           @default(now())
 
   // 새로 추가된 필드들 (기존 데이터 호환성 위해 모두 optional)
   inspection_date         DateTime?  // 현장 방문 예정일
@@ -138,6 +147,7 @@ model RenovationRequest {
   inspection_interests  InspectionInterest[]
 
   @@index([status, category])
+  @@index([property_type])          // 새로 추가된 인덱스
   @@index([postal_code])
   @@index([created_at])
   @@index([inspection_date])       // 새로 추가된 인덱스
