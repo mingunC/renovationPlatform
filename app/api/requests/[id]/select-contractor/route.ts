@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient } from '@/lib/supabase';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient();
+    const { id } = await params;
+    const supabase = await createSupabaseServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -30,7 +31,7 @@ export async function POST(
     // Verify the request belongs to the current user
     const renovationRequest = await prisma.renovationRequest.findUnique({
       where: {
-        id: params.id,
+        id: id,
         customer_id: user.id
       },
       include: {
@@ -67,7 +68,7 @@ export async function POST(
 
     // Update the request with selected contractor
     const updatedRequest = await prisma.renovationRequest.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         selected_contractor_id: contractor_id,
         status: 'CONTRACTOR_SELECTED'
@@ -78,7 +79,7 @@ export async function POST(
     await prisma.bid.update({
       where: {
         request_id_contractor_id: {
-          request_id: params.id,
+          request_id: id,
           contractor_id: contractor_id
         }
       },
@@ -90,7 +91,7 @@ export async function POST(
     // Reject all other bids
     await prisma.bid.updateMany({
       where: {
-        request_id: params.id,
+        request_id: id,
         contractor_id: {
           not: contractor_id
         }
@@ -108,7 +109,7 @@ export async function POST(
 
     if (contractor) {
       // TODO: Send acceptance email to selected contractor
-      console.log(`Contractor ${contractor.business_name} selected for request ${params.id}`);
+      console.log(`Contractor ${contractor.business_name} selected for request ${id}`);
     }
 
     return NextResponse.json({

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 
 /**
  * Vercel Cron Job: 매일 자정에 실행
- * BIDDING_OPEN 상태에서 입찰 마감일이 지난 요청들을 
+ * BIDDING_OPEN 상태에서 7일 입찰 기간이 만료된 요청들을 
  * BIDDING_CLOSED 상태로 변경
  */
 export async function GET(request: NextRequest) {
@@ -20,61 +20,43 @@ export async function GET(request: NextRequest) {
     const now = new Date()
     
     console.log(`[CRON] Closing bidding process for datetime: ${now.toISOString()}`)
+    console.log(`[CRON] Checking for requests where 7-day bidding period has expired`)
     
-    // 입찰 마감일이 지나고 BIDDING_OPEN 상태인 요청들 조회
+    // 7일 경과한 입찰 요청 조회 (bidding_end_date < now)
     const requestsToClose = await prisma.renovationRequest.findMany({
       where: {
         status: 'BIDDING_OPEN',
         bidding_end_date: {
-          lt: now, // 현재 시간보다 이전
-        }
-      },
-      include: {
-        customer: true,
-        bids: {
-          where: {
-            status: 'PENDING',
-          },
-          include: {
-            contractor: {
-              include: {
-                user: true,
-              }
-            }
-          },
-          orderBy: {
-            total_amount: 'asc', // 가격 순 정렬
-          }
+          lt: now // 현재 시간보다 이전인 경우 (7일 경과)
         }
       }
     })
     
-    console.log(`[CRON] Found ${requestsToClose.length} requests to close bidding`)
+    console.log(`[CRON] Found ${requestsToClose.length} requests to close bidding (7-day period expired)`)
     
     const results = []
     
     for (const request of requestsToClose) {
       try {
         // 상태를 BIDDING_CLOSED로 변경
-        const updatedRequest = await prisma.renovationRequest.update({
+        await prisma.renovationRequest.update({
           where: { id: request.id },
           data: {
-            status: 'BIDDING_CLOSED',
+            status: 'BIDDING_CLOSED'
           }
         })
         
-        console.log(`[CRON] Closed bidding for request ${request.id} - ${request.bids.length} bids received`)
+        console.log(`[CRON] Closed bidding for request ${request.id}`)
         
-        // TODO: 고객에게 입찰 결과 이메일 발송
-        // - 받은 입찰 수
-        // - 비교하여 업체 선택할 수 있다는 안내
-        // - 대시보드 링크
+        // TODO: 마감 알림 이메일 발송 (e.g., BiddingClosedEmail)
+        // - 고객에게 입찰 결과 알림
+        // - 받은 입찰 수 안내
+        // - 업체 선택 안내
         
         results.push({
           request_id: request.id,
           status: 'success',
-          bids_received: request.bids.length,
-          message: 'Bidding closed successfully'
+          message: 'Bidding closed successfully after 7-day period'
         })
         
       } catch (error) {
@@ -91,15 +73,14 @@ export async function GET(request: NextRequest) {
       processed: results.length,
       successful: results.filter(r => r.status === 'success').length,
       errors: results.filter(r => r.status === 'error').length,
-      total_bids: results.reduce((sum, r) => sum + (r.bids_received || 0), 0),
     }
     
     console.log(`[CRON] Bidding close process completed:`, summary)
     
     return NextResponse.json({
       success: true,
-      message: 'Bidding close process completed',
-      timestamp: new Date().toISOString(),
+      message: 'Bidding closed for expired requests',
+      timestamp: now.toISOString(),
       summary,
       results,
     })

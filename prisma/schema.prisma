@@ -31,6 +31,11 @@ enum RenovationCategory {
   FLOORING
   PAINTING
   OTHER
+  OFFICE
+  RETAIL
+  CAFE_RESTAURANT
+  EDUCATION
+  HOSPITALITY_HEALTHCARE
 }
 
 enum BudgetRange {

@@ -231,13 +231,14 @@ export function LocationStep({ postalCode, address, city, inspectionDate, onUpda
         onUpdate({ 
           postal_code: formatted, 
           address, 
-          city: detectedCity || city 
+          city: detectedCity || city,
+          inspection_date: inspectionDate
         })
       } else {
         setPostalCodeError('Please enter a valid Canadian postal code (e.g., A0A 0A0)')
       }
     } else {
-      onUpdate({ postal_code: formatted, address, city })
+      onUpdate({ postal_code: formatted, address, city, inspection_date: inspectionDate })
     }
   }
 
@@ -248,7 +249,7 @@ export function LocationStep({ postalCode, address, city, inspectionDate, onUpda
       setAddressError('Please enter a complete address')
     }
     
-    onUpdate({ postal_code: postalCode, address: value, city })
+    onUpdate({ postal_code: postalCode, address: value, city, inspection_date: inspectionDate })
   }
 
   const isPostalCodeValid = validateCanadianPostalCode(postalCode)

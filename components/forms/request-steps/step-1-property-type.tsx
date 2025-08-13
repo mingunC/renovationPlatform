@@ -44,7 +44,7 @@ const RESIDENTIAL_TYPES = [
 
 const COMMERCIAL_TYPE = {
   id: 'COMMERCIAL',
-  title: 'Commercial Real Estate',
+  title: 'Commercial Property',
   koreanTitle: '상업용 부동산',
   description: '상업용 건물, 사무실, 매장',
   englishDescription: 'Commercial buildings, offices, retail spaces',

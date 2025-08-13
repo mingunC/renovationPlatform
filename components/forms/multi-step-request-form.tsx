@@ -105,6 +105,7 @@ export function MultiStepRequestForm() {
         return (
           <RenovationCategoryStep
             selectedCategory={formData.category}
+            propertyType={formData.property_type}
             onSelect={(category) => updateFormData({ category: category })}
           />
         )

@@ -6,7 +6,7 @@ export interface RenovationFormData {
   property_type: PropertyType | null
   
   // Step 2 - Renovation Category
-  category: 'KITCHEN' | 'BATHROOM' | 'BASEMENT' | 'FLOORING' | 'PAINTING' | 'OTHER' | null
+  category: 'KITCHEN' | 'BATHROOM' | 'BASEMENT' | 'FLOORING' | 'PAINTING' | 'OTHER' | 'OFFICE' | 'RETAIL' | 'CAFE_RESTAURANT' | 'EDUCATION' | 'HOSPITALITY_HEALTHCARE' | null
   
   // Step 3 - Budget Range
   budget_range: 'UNDER_50K' | 'RANGE_50_100K' | 'OVER_100K' | null
@@ -18,12 +18,11 @@ export interface RenovationFormData {
   postal_code: string
   address: string
   city: string
+  inspection_date: string
   
   // Step 6 - Details
   description: string
   photos: File[]
-  
-
 }
 
 const initialFormData: RenovationFormData = {

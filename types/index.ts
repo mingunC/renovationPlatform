@@ -35,7 +35,7 @@ export type PropertyType = 'DETACHED_HOUSE' | 'TOWNHOUSE' | 'CONDO' | 'COMMERCIA
 
 export interface CreateRenovationRequestData {
   property_type: PropertyType
-  category: string
+  category: 'KITCHEN' | 'BATHROOM' | 'BASEMENT' | 'FLOORING' | 'PAINTING' | 'OTHER' | 'OFFICE' | 'RETAIL' | 'CAFE_RESTAURANT' | 'EDUCATION' | 'HOSPITALITY_HEALTHCARE'
   budget_range: string
   timeline: string
   postal_code: string

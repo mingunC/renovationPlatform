@@ -77,11 +77,20 @@ export async function PATCH(
 
     // Send email notifications to all matching contractors
     for (const contractor of contractors) {
-      await emailService.sendInspectionInvitationEmail(
+      await emailService.sendNewRequestEmail(
         contractor.user.email,
         contractor.business_name || contractor.user.name,
-        updatedRequest,
-        inspectionDate
+        {
+          id: updatedRequest.id,
+          category: updatedRequest.category,
+          budget_range: updatedRequest.budget_range,
+          timeline: updatedRequest.timeline,
+          postal_code: updatedRequest.postal_code,
+          address: updatedRequest.address,
+          description: updatedRequest.description,
+          created_at: updatedRequest.created_at,
+          customer: { name: updatedRequest.customer.name }
+        }
       )
     }
 
