@@ -80,10 +80,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('🚀 POST /api/auth/profile called');
+  
   try {
     const { id, email, name, type = 'CUSTOMER' } = await request.json();
+    console.log('📝 Request data:', { id, email, name, type });
 
     if (!id || !email) {
+      console.error('❌ Missing required fields:', { id, email });
       return Response.json({ 
         error: 'ID and email are required' 
       }, { status: 400 });
@@ -114,33 +118,51 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    console.log('✅ Supabase client created');
+
     // 안전한 upsert: 이메일로 기존 사용자 확인 후 ID 업데이트
+    console.log('🔍 Checking for existing user by email...');
     const { data: existingUserByEmail, error: findError } = await supabase
       .from('users')
       .select('*')
       .eq('email', email)
       .single();
 
+    if (findError && findError.code !== 'PGRST116') {
+      console.error('❌ Error finding user by email:', findError);
+      throw findError;
+    }
+
     let user;
 
     if (existingUserByEmail) {
+      console.log('✅ Existing user found:', { 
+        id: existingUserByEmail.id, 
+        email: existingUserByEmail.email, 
+        type: existingUserByEmail.type 
+      });
       // 기존 사용자가 있으면 ID 업데이트 (Supabase ID 변경 대응)
       const { data: updatedUser, error: updateError } = await supabase
         .from('users')
         .update({
           id: id, // 새로운 Supabase ID로 업데이트
           name: name || existingUserByEmail.name,
+          type: type || existingUserByEmail.type, // type도 업데이트
           updated_at: new Date().toISOString()
         })
         .eq('id', existingUserByEmail.id)
         .select()
         .single();
       
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('❌ Error updating user:', updateError);
+        throw updateError;
+      }
       user = updatedUser;
       
-      console.log(`✅ Updated existing user: ${email} with new ID: ${id}`);
+      console.log(`✅ Updated existing user: ${email} with new ID: ${id}, type: ${user.type}`);
     } else {
+      console.log('🆕 No existing user found, creating new user...');
       // 새 사용자 생성
       const { data: newUser, error: createError } = await supabase
         .from('users')
@@ -179,7 +201,7 @@ export async function POST(request: NextRequest) {
       }
       
       user = newUser;
-      console.log(`✅ Created new user: ${email} with ID: ${id}`);
+      console.log(`✅ Created new user: ${email} with ID: ${id}, type: ${user.type}`);
     }
 
     return Response.json({
