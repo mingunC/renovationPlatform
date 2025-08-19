@@ -4,6 +4,8 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
+  console.log('🚀 POST /api/contractor/inspection-interest called');
+  
   try {
     // Supabase 클라이언트 생성
     const cookieStore = await cookies();
@@ -30,14 +32,19 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    console.log('✅ Supabase client created');
+
     // 사용자 인증 확인
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
+      console.error('❌ Authentication error:', authError);
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
+
+    console.log('✅ User authenticated:', user.id);
 
     // 업체 프로필 확인
     const { data: contractor, error: contractorError } = await supabase
@@ -47,18 +54,24 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (contractorError || !contractor) {
+      console.error('❌ Contractor profile error:', contractorError);
       return NextResponse.json(
         { error: 'Contractor profile not found' },
         { status: 404 }
       );
     }
 
+    console.log('✅ Contractor profile found:', contractor.id);
+
     // 요청 본문 파싱
     const body = await request.json();
     const { request_id, will_participate, notes } = body;
 
+    console.log('📝 Request body:', { request_id, will_participate, notes });
+
     // 필수 필드 검증
     if (!request_id || typeof will_participate !== 'boolean') {
+      console.error('❌ Missing required fields');
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -73,15 +86,19 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (requestError || !renovationRequest) {
+      console.error('❌ Project request error:', requestError);
       return NextResponse.json(
         { error: 'Project request not found' },
         { status: 404 }
       );
     }
 
+    console.log('✅ Project request found, status:', renovationRequest.status);
+
     // 현장방문 참여 가능한 상태인지 확인
     const allowedStatuses = ['OPEN', 'INSPECTION_PENDING'];
     if (!allowedStatuses.includes(renovationRequest.status)) {
+      console.error('❌ Invalid project status for inspection:', renovationRequest.status);
       return NextResponse.json(
         { error: 'Cannot participate in inspection for this project status' },
         { status: 400 }
@@ -96,8 +113,11 @@ export async function POST(request: NextRequest) {
       .eq('contractor_id', contractor.id)
       .single();
 
+    console.log('🔍 Existing interest check:', { existingInterest, existingError });
+
     let result;
     if (existingInterest && !existingError) {
+      console.log('📝 Updating existing interest');
       // 기존 참여 상태 업데이트
       const { data: updatedInterest, error: updateError } = await supabase
         .from('inspection_interests')
@@ -111,14 +131,16 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (updateError) {
-        console.error('Error updating inspection interest:', updateError);
+        console.error('❌ Error updating inspection interest:', updateError);
         return NextResponse.json(
           { error: 'Failed to update inspection interest' },
           { status: 500 }
         );
       }
       result = updatedInterest;
+      console.log('✅ Interest updated successfully');
     } else {
+      console.log('🆕 Creating new interest');
       // 새 참여 상태 생성
       const { data: newInterest, error: createError } = await supabase
         .from('inspection_interests')
@@ -134,24 +156,32 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (createError) {
-        console.error('Error creating inspection interest:', createError);
+        console.error('❌ Error creating inspection interest:', createError);
         return NextResponse.json(
           { error: 'Failed to create inspection interest' },
           { status: 500 }
         );
       }
       result = newInterest;
+      console.log('✅ Interest created successfully');
     }
 
+    console.log('🎉 Operation completed successfully');
     return NextResponse.json({
       success: true,
+      message: will_participate ? '참여가 확정되었습니다.' : '참여가 취소되었습니다.',
       inspection_interest: result
     });
 
-  } catch (error) {
-    console.error('Inspection interest error:', error);
+  } catch (error: any) {
+    console.error('💥 Inspection interest error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      type: error.constructor.name
+    });
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: process.env.NODE_ENV === 'development' ? error.message : undefined },
       { status: 500 }
     );
   }

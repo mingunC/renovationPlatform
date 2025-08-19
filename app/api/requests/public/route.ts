@@ -32,12 +32,11 @@ export async function GET(request: NextRequest) {
 
     // 쿼리 파라미터 파싱
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
     const category = searchParams.get('category');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // 기본 쿼리 구성
+    // 기본 쿼리 구성 - OPEN과 INSPECTION_PENDING 상태만
     let query = supabase
       .from('renovation_requests')
       .select(`
@@ -52,13 +51,13 @@ export async function GET(request: NextRequest) {
           id,
           name,
           email
+        ),
+        inspection_interests(
+          contractor_id,
+          will_participate
         )
-      `);
-
-    // 상태 필터 적용
-    if (status) {
-      query = query.eq('status', status);
-    }
+      `)
+      .in('status', ['OPEN', 'INSPECTION_PENDING']);
 
     // 카테고리 필터 적용
     if (category) {
@@ -78,10 +77,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 전체 개수 조회
+    // 전체 개수 조회 (OPEN과 INSPECTION_PENDING 상태만)
     const { count: totalCount, error: countError } = await supabase
       .from('renovation_requests')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['OPEN', 'INSPECTION_PENDING']);
 
     if (countError) {
       console.error('Error counting requests:', countError);
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      requests: requests || [],
+      data: requests || [],
       pagination: {
         total: totalCount || 0,
         limit,

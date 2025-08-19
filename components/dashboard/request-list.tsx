@@ -206,7 +206,7 @@ export function RequestList() {
       {/* 요청 목록 */}
       {requests.map((request) => {
         const participating = isParticipating(request)
-        const participantCount = request._count?.inspection_interests || 0
+        const participantCount = request.inspection_interests?.length || 0
 
         return (
           <Card 
