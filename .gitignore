@@ -101,6 +101,10 @@ Desktop.ini
 *.tmp
 *.temp
 
+# Uploaded files
+public/uploads/
+uploads/
+
 # Prisma
 prisma/migrations/
 !prisma/migrations/.keep

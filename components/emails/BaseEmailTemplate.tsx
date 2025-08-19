@@ -86,25 +86,6 @@ export function BaseEmailTemplate({ children, previewText, title }: BaseEmailTem
   )
 }
 
-// Shared button component for CTAs
-export function EmailButton({ 
-  href, 
-  children, 
-  variant = 'primary' 
-}: { 
-  href: string
-  children: React.ReactNode
-  variant?: 'primary' | 'secondary'
-}) {
-  const buttonStyle = variant === 'primary' ? primaryButton : secondaryButton
-  
-  return (
-    <Button href={href} style={buttonStyle}>
-      {children}
-    </Button>
-  )
-}
-
 // Badge component for status/category indicators
 export function EmailBadge({ 
   children, 
@@ -206,33 +187,6 @@ const link = {
   textDecoration: 'none',
 }
 
-const primaryButton = {
-  backgroundColor: '#3b82f6',
-  color: '#ffffff',
-  padding: '12px 24px',
-  borderRadius: '6px',
-  textDecoration: 'none',
-  fontSize: '16px',
-  fontWeight: '600',
-  display: 'inline-block',
-  textAlign: 'center' as const,
-  minWidth: '160px',
-}
-
-const secondaryButton = {
-  backgroundColor: 'transparent',
-  color: '#3b82f6',
-  padding: '12px 24px',
-  borderRadius: '6px',
-  textDecoration: 'none',
-  fontSize: '16px',
-  fontWeight: '600',
-  display: 'inline-block',
-  textAlign: 'center' as const,
-  border: '2px solid #3b82f6',
-  minWidth: '160px',
-}
-
 const badge = {
   display: 'inline-block',
   padding: '4px 12px',
@@ -240,4 +194,161 @@ const badge = {
   fontSize: '12px',
   fontWeight: '600',
   margin: '0',
+}
+
+// New styles for enhanced email templates
+export const BaseEmailStyles = {
+  body: {
+    backgroundColor: '#f9fafb',
+    fontFamily: 'Arial, sans-serif',
+    margin: '0',
+    padding: '0',
+  },
+  container: {
+    maxWidth: '600px',
+    margin: '0 auto',
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    backgroundColor: '#3b82f6',
+    padding: '24px',
+    textAlign: 'center' as const,
+  },
+  logo: {
+    width: '120px',
+    height: '40px',
+  },
+  content: {
+    padding: '32px 24px',
+  },
+  heading: {
+    color: '#1f2937',
+    fontSize: '24px',
+    fontWeight: 'bold',
+    margin: '0 0 16px 0',
+    textAlign: 'center' as const,
+  },
+  subHeading: {
+    color: '#374151',
+    fontSize: '18px',
+    fontWeight: '600',
+    margin: '0 0 12px 0',
+  },
+  text: {
+    color: '#374151',
+    fontSize: '16px',
+    lineHeight: '24px',
+    margin: '0 0 16px 0',
+  },
+  description: {
+    color: '#6b7280',
+    fontSize: '14px',
+    lineHeight: '20px',
+    margin: '16px 0',
+  },
+  highlightBox: {
+    backgroundColor: '#f0f9ff',
+    border: '1px solid #0ea5e9',
+    borderRadius: '8px',
+    padding: '20px',
+    margin: '20px 0',
+  },
+  infoBox: {
+    backgroundColor: '#f0fdf4',
+    border: '1px solid #10b981',
+    borderRadius: '8px',
+    padding: '20px',
+    margin: '20px 0',
+  },
+  successBox: {
+    backgroundColor: '#f0fdf4',
+    border: '1px solid #10b981',
+    borderRadius: '8px',
+    padding: '20px',
+    margin: '20px 0',
+  },
+  warningBox: {
+    backgroundColor: '#fef3c7',
+    border: '1px solid #f59e0b',
+    borderRadius: '8px',
+    padding: '20px',
+    margin: '20px 0',
+  },
+  tipsSection: {
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
+    padding: '20px',
+    margin: '20px 0',
+  },
+  ctaSection: {
+    backgroundColor: '#f0f9ff',
+    border: '2px solid #0ea5e9',
+    borderRadius: '8px',
+    padding: '24px',
+    margin: '24px 0',
+    textAlign: 'center' as const,
+  },
+  button: {
+    backgroundColor: '#0ea5e9',
+    color: '#ffffff',
+    padding: '16px 32px',
+    borderRadius: '8px',
+    textDecoration: 'none',
+    fontSize: '18px',
+    fontWeight: '600',
+    display: 'inline-block',
+    margin: '16px 0',
+  },
+  list: {
+    margin: '16px 0',
+    padding: '0',
+  },
+  listItem: {
+    color: '#374151',
+    fontSize: '14px',
+    lineHeight: '20px',
+    margin: '8px 0',
+    paddingLeft: '20px',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse' as const,
+    margin: '16px 0',
+  },
+  tableHeader: {
+    backgroundColor: '#f3f4f6',
+  },
+  tableCell: {
+    padding: '12px',
+    border: '1px solid #e5e7eb',
+    fontSize: '14px',
+    textAlign: 'left' as const,
+  },
+  tableRowEven: {
+    backgroundColor: '#f9fafb',
+  },
+  tableRowOdd: {
+    backgroundColor: '#ffffff',
+  },
+  divider: {
+    borderColor: '#e5e7eb',
+    margin: '32px 0',
+  },
+  footer: {
+    color: '#6b7280',
+    fontSize: '14px',
+    textAlign: 'center' as const,
+    margin: '24px 0 0 0',
+  },
+  link: {
+    color: '#0ea5e9',
+    textDecoration: 'none',
+  },
+  warning: {
+    color: '#dc2626',
+    fontSize: '14px',
+    fontWeight: '600',
+    margin: '16px 0',
+  },
 }

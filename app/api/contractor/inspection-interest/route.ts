@@ -1,132 +1,157 @@
+// app/api/contractor/inspection-interest/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { createSupabaseServerClient } from '@/lib/supabase';
-import { z } from 'zod';
-
-// 참여 의사 표시 스키마
-const inspectionInterestSchema = z.object({
-  request_id: z.string().uuid(),
-  will_participate: z.boolean(),
-});
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { request_id, will_participate } = body;
-    
-    // Mock 데이터 처리 (개발/데모 환경용)
-    if (request_id && typeof request_id === 'string' && request_id.startsWith('mock-')) {
-      // Mock 데이터에 대한 요청이므로 시뮬레이션된 응답 반환
-      await new Promise(resolve => setTimeout(resolve, 500)); // 실제 API 지연 시뮬레이션
-      
-      return NextResponse.json({
-        success: true,
-        message: `Inspection interest ${will_participate ? 'confirmed' : 'declined'} successfully`,
-        inspection_interest: {
-          id: `mock-interest-${Date.now()}`,
-          request_id,
-          will_participate,
-          inspection_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7일 후
-          project_info: {
-            category: 'KITCHEN',
-            budget_range: 'RANGE_50_100K',
-            postal_code: 'M5V 3A8',
-            address: '123 Main Street, Toronto, ON',
-            description: 'Mock inspection interest response',
+    // Supabase 클라이언트 생성
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
           },
-          updated_at: new Date().toISOString(),
-        }
-      });
-    }
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
+          },
+        },
+      }
+    );
 
-    // 실제 UUID 형식 검증
-    const validatedData = inspectionInterestSchema.parse(body);
-    const { request_id: validRequestId, will_participate: validWillParticipate } = validatedData;
-
-    // 사용자 인증
-    const supabase = await createSupabaseServerClient();
+    // 사용자 인증 확인
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-
     if (authError || !user) {
       return NextResponse.json(
-        { 
-          error: 'Authentication required',
-          message: 'Please log in to participate in inspections'
-        },
+        { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    // 업체 정보 확인
-    const contractor = await prisma.contractor.findUnique({
-      where: { user_id: user.id }
-    });
+    // 업체 프로필 확인
+    const { data: contractor, error: contractorError } = await supabase
+      .from('contractors')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
 
-    if (!contractor) {
+    if (contractorError || !contractor) {
       return NextResponse.json(
-        { 
-          error: 'Contractor profile not found',
-          message: 'Please complete your contractor registration first'
-        },
+        { error: 'Contractor profile not found' },
         { status: 404 }
       );
     }
 
-    // 요청 존재 여부 및 상태 확인
-    const renovationRequest = await prisma.renovationRequest.findUnique({
-      where: { id: validRequestId }
-    });
+    // 요청 본문 파싱
+    const body = await request.json();
+    const { request_id, will_participate, notes } = body;
 
-    if (!renovationRequest) {
+    // 필수 필드 검증
+    if (!request_id || typeof will_participate !== 'boolean') {
       return NextResponse.json(
-        { error: 'Request not found' },
-        { status: 404 }
-      );
-    }
-
-    if (renovationRequest.status !== 'INSPECTION_SCHEDULED') {
-      return NextResponse.json(
-        { error: 'Request is not in inspection scheduled status' },
+        { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Create or update inspection interest
-    const inspectionInterest = await prisma.inspectionInterest.upsert({
-      where: {
-        request_id_contractor_id: {
-          request_id: validRequestId,
-          contractor_id: contractor.id
-        }
-      },
-      update: {
-        will_participate: validWillParticipate
-      },
-      create: {
-        request_id: validRequestId,
-        contractor_id: contractor.id,
-        will_participate: validWillParticipate
+    // 프로젝트 요청 상태 확인
+    const { data: renovationRequest, error: requestError } = await supabase
+      .from('renovation_requests')
+      .select('status')
+      .eq('id', request_id)
+      .single();
+
+    if (requestError || !renovationRequest) {
+      return NextResponse.json(
+        { error: 'Project request not found' },
+        { status: 404 }
+      );
+    }
+
+    // 현장방문 참여 가능한 상태인지 확인
+    const allowedStatuses = ['OPEN', 'INSPECTION_PENDING'];
+    if (!allowedStatuses.includes(renovationRequest.status)) {
+      return NextResponse.json(
+        { error: 'Cannot participate in inspection for this project status' },
+        { status: 400 }
+      );
+    }
+
+    // 기존 참여 상태 확인
+    const { data: existingInterest, error: existingError } = await supabase
+      .from('inspection_interests')
+      .select('id')
+      .eq('request_id', request_id)
+      .eq('contractor_id', contractor.id)
+      .single();
+
+    let result;
+    if (existingInterest && !existingError) {
+      // 기존 참여 상태 업데이트
+      const { data: updatedInterest, error: updateError } = await supabase
+        .from('inspection_interests')
+        .update({
+          will_participate,
+          notes: notes || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingInterest.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error updating inspection interest:', updateError);
+        return NextResponse.json(
+          { error: 'Failed to update inspection interest' },
+          { status: 500 }
+        );
       }
-    });
+      result = updatedInterest;
+    } else {
+      // 새 참여 상태 생성
+      const { data: newInterest, error: createError } = await supabase
+        .from('inspection_interests')
+        .insert({
+          request_id,
+          contractor_id: contractor.id,
+          will_participate,
+          notes: notes || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating inspection interest:', createError);
+        return NextResponse.json(
+          { error: 'Failed to create inspection interest' },
+          { status: 500 }
+        );
+      }
+      result = newInterest;
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Inspection interest ${validWillParticipate ? 'confirmed' : 'declined'} successfully`,
-      data: inspectionInterest
+      inspection_interest: result
     });
 
   } catch (error) {
-    console.error('Error recording inspection interest:', error);
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid input data', details: error.issues },
-        { status: 400 }
-      );
-    }
-    
+    console.error('Inspection interest error:', error);
     return NextResponse.json(
-      { error: 'Failed to record inspection interest' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -134,54 +159,104 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Supabase 클라이언트 생성
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
+          },
+        },
+      }
+    );
 
+    // 사용자 인증 확인
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    // Get contractor profile
-    const contractor = await prisma.contractor.findUnique({
-      where: { user_id: user.id }
-    });
+    // 업체 프로필 확인
+    const { data: contractor, error: contractorError } = await supabase
+      .from('contractors')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
 
-    if (!contractor) {
+    if (contractorError || !contractor) {
       return NextResponse.json(
         { error: 'Contractor profile not found' },
         { status: 404 }
       );
     }
 
-    // Get all inspection interests for this contractor
-    const inspectionInterests = await prisma.inspectionInterest.findMany({
-      where: {
-        contractor_id: contractor.id
-      },
-      include: {
-        request: {
-          include: {
-            customer: true
-          }
-        }
-      },
-      orderBy: {
-        created_at: 'desc'
-      }
-    });
+    // 쿼리 파라미터 파싱
+    const { searchParams } = new URL(request.url);
+    const request_id = searchParams.get('request_id');
+
+    // 기본 쿼리 구성
+    let query = supabase
+      .from('inspection_interests')
+      .select(`
+        id,
+        will_participate,
+        notes,
+        created_at,
+        updated_at,
+        request:renovation_requests(
+          id,
+          category,
+          budget_range,
+          address,
+          description,
+          status
+        )
+      `)
+      .eq('contractor_id', contractor.id);
+
+    // 특정 요청에 대한 참여 상태만 조회
+    if (request_id) {
+      query = query.eq('request_id', request_id);
+    }
+
+    // 참여 상태 조회
+    const { data: interests, error: interestsError } = await query
+      .order('created_at', { ascending: false });
+
+    if (interestsError) {
+      console.error('Error fetching inspection interests:', interestsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch inspection interests' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      data: inspectionInterests
+      inspection_interests: interests || []
     });
 
   } catch (error) {
-    console.error('Error fetching inspection interests:', error);
+    console.error('Inspection interests fetch error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch inspection interests' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

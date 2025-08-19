@@ -37,8 +37,8 @@ export function StepProgress({
         </div>
       </div>
 
-      {/* Step Indicators */}
-      <div className="flex items-center justify-between">
+      {/* Step Indicators - Hidden on mobile, shown on desktop */}
+      <div className="hidden md:flex items-center justify-between">
         {Array.from({ length: totalSteps }, (_, index) => {
           const stepNumber = index + 1
           const isCompleted = stepNumber < currentStep || (stepNumber === currentStep && isStepValid(stepNumber))
@@ -78,7 +78,7 @@ export function StepProgress({
                 {stepNumber < totalSteps && (
                   <div
                     className={cn(
-                      'w-16 md:w-24 h-1 ml-2 transition-all duration-200',
+                      'w-24 h-1 ml-2 transition-all duration-200',
                       stepNumber < currentStep ? 'bg-green-600' : 'bg-gray-200'
                     )}
                   />
@@ -86,7 +86,7 @@ export function StepProgress({
               </div>
               <span
                 className={cn(
-                  'text-xs text-center hidden md:block',
+                  'text-xs text-center',
                   isCurrent ? 'font-medium text-blue-600' : 'text-gray-600'
                 )}
               >
@@ -95,6 +95,31 @@ export function StepProgress({
             </div>
           )
         })}
+      </div>
+
+      {/* Mobile Step Indicators - Compact version */}
+      <div className="md:hidden">
+        <div className="flex items-center justify-center space-x-2">
+          {Array.from({ length: totalSteps }, (_, index) => {
+            const stepNumber = index + 1
+            const isCompleted = stepNumber < currentStep || (stepNumber === currentStep && isStepValid(stepNumber))
+            const isCurrent = stepNumber === currentStep
+            
+            return (
+              <div
+                key={stepNumber}
+                className={cn(
+                  'w-3 h-3 rounded-full transition-all duration-200',
+                  isCompleted
+                    ? 'bg-green-600'
+                    : isCurrent
+                    ? 'bg-blue-600'
+                    : 'bg-gray-300'
+                )}
+              />
+            )
+          })}
+        </div>
       </div>
 
       {/* Current Step Title (Mobile) */}

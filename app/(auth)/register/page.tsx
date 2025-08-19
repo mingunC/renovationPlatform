@@ -23,36 +23,21 @@ export default function RegisterPage() {
         
         <Card>
           <CardHeader>
-            <CardTitle>Get started</CardTitle>
+            <CardTitle>Homeowner Registration</CardTitle>
             <CardDescription>
-              Choose your account type and fill out the form below
+              Fill out the form below to create your account
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="customer" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="customer">I&apos;m a Homeowner</TabsTrigger>
-                <TabsTrigger value="contractor">I&apos;m a Contractor</TabsTrigger>
-              </TabsList>
-              <TabsContent value="customer" className="space-y-4">
-                <div className="text-center py-4">
-                  <h3 className="text-lg font-medium text-gray-900">Homeowner Account</h3>
-                  <p className="text-sm text-gray-600">
-                    Submit renovation requests and get quotes from contractors
-                  </p>
-                </div>
-                <RegisterForm userType="CUSTOMER" />
-              </TabsContent>
-              <TabsContent value="contractor" className="space-y-4">
-                <div className="text-center py-4">
-                  <h3 className="text-lg font-medium text-gray-900">Contractor Account</h3>
-                  <p className="text-sm text-gray-600">
-                    Browse requests and submit bids to grow your business
-                  </p>
-                </div>
-                <RegisterForm userType="CONTRACTOR" />
-              </TabsContent>
-            </Tabs>
+            <div className="space-y-4">
+              <div className="text-center py-4">
+                <h3 className="text-lg font-medium text-gray-900">Homeowner Account</h3>
+                <p className="text-sm text-gray-600">
+                  Submit renovation requests and get quotes from contractors
+                </p>
+              </div>
+              <RegisterForm userType="CUSTOMER" />
+            </div>
           </CardContent>
         </Card>
         

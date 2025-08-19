@@ -1,254 +1,212 @@
-import { BaseEmailTemplate } from './BaseEmailTemplate'
+import {
+  Body,
+  Container,
+  Head,
+  Heading,
+  Html,
+  Img,
+  Link,
+  Preview,
+  Section,
+  Text,
+  Button,
+  Hr,
+} from '@react-email/components'
+import { BaseEmailStyles } from './BaseEmailTemplate'
 
 interface BiddingStartedEmailProps {
   contractorName: string
   businessName?: string
-  projectDetails: {
+  project: {
+    id: string
     category: string
+    property_type: string
     budget_range: string
-    postal_code: string
     address: string
     description: string
-    customer_name: string
+    bidding_end_date: Date
   }
-  biddingEndDate: string
-  projectId: string
-  participatingContractors: number
+  customerName: string
+  biddingUrl: string
 }
 
-export function BiddingStartedEmail({
+export const BiddingStartedEmail = ({
   contractorName,
   businessName,
-  projectDetails,
-  biddingEndDate,
-  projectId,
-  participatingContractors,
-}: BiddingStartedEmailProps) {
-  const formatCategory = (category: string) => {
-    return category.charAt(0) + category.slice(1).toLowerCase()
-  }
+  project,
+  customerName,
+  biddingUrl,
+}: BiddingStartedEmailProps) => {
+  const previewText = `🎯 ${project.category} 프로젝트 입찰이 시작되었습니다!`
 
-  const formatBudgetRange = (range: string) => {
-    switch (range) {
-      case 'UNDER_50K': return 'Under $50,000'
-      case 'RANGE_50_100K': return '$50,000 - $100,000'
-      case 'OVER_100K': return 'Over $100,000'
-      default: return range
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-CA', {
-      weekday: 'long',
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('ko-KR', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    })
+    }).format(date)
   }
 
-  const getDaysUntilDeadline = (dateString: string) => {
-    const deadline = new Date(dateString)
-    const now = new Date()
-    const diffTime = deadline.getTime() - now.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays
+  const getBudgetRangeText = (range: string) => {
+    const budgetMap: Record<string, string> = {
+      'UNDER_50K': '50만원 미만',
+      'RANGE_50_100K': '50만원 - 100만원',
+      'OVER_100K': '100만원 이상',
+    }
+    return budgetMap[range] || range
   }
 
-  const daysLeft = getDaysUntilDeadline(biddingEndDate)
+  const getCategoryText = (category: string) => {
+    const categoryMap: Record<string, string> = {
+      'KITCHEN': '주방 리노베이션',
+      'BATHROOM': '욕실 리노베이션',
+      'BASEMENT': '지하실 리노베이션',
+      'FLOORING': '바닥재',
+      'PAINTING': '페인팅',
+      'OTHER': '기타',
+      'OFFICE': '사무실',
+      'RETAIL': '상업용',
+      'CAFE_RESTAURANT': '카페/레스토랑',
+      'EDUCATION': '교육시설',
+      'HOSPITALITY_HEALTHCARE': '호텔/의료시설',
+    }
+    return categoryMap[category] || category
+  }
+
+  const getPropertyTypeText = (type: string) => {
+    const typeMap: Record<string, string> = {
+      'DETACHED_HOUSE': '단독주택',
+      'TOWNHOUSE': '타운하우스',
+      'CONDO': '콘도',
+      'COMMERCIAL': '상업용 부동산',
+    }
+    return typeMap[type] || type
+  }
 
   return (
-    <BaseEmailTemplate
-      title="🎯 Bidding Now Open - Submit Your Quote"
-      previewText={`${formatCategory(projectDetails.category)} project bidding is now open. ${daysLeft} days remaining.`}
-    >
-      <div style={{ padding: '24px', fontFamily: 'Arial, sans-serif' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ color: '#1f2937', fontSize: '24px', marginBottom: '8px' }}>
-            🎯 Bidding Is Now Open!
-          </h1>
-          <p style={{ color: '#6b7280', fontSize: '16px', margin: '0' }}>
-            The inspection is complete. Time to submit your competitive bid.
-          </p>
-        </div>
+    <Html>
+      <Head />
+      <Preview>{previewText}</Preview>
+      <Body style={BaseEmailStyles.body}>
+        <Container style={BaseEmailStyles.container}>
+          <Section style={BaseEmailStyles.header}>
+            <Img
+              src={`${process.env.NEXT_PUBLIC_APP_URL}/logo.png`}
+              width="120"
+              height="40"
+              alt="Renovate Platform"
+              style={BaseEmailStyles.logo}
+            />
+          </Section>
 
-        {/* Contractor Greeting */}
-        <div style={{ marginBottom: '24px' }}>
-          <p style={{ fontSize: '16px', margin: '0' }}>
-            Hello {contractorName}{businessName ? ` from ${businessName}` : ''},
-          </p>
-          <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '8px' }}>
-            Thank you for participating in the inspection. The bidding process is now officially open!
-          </p>
-        </div>
+          <Section style={BaseEmailStyles.content}>
+            <Heading style={BaseEmailStyles.heading}>
+              🎯 입찰이 시작되었습니다!
+            </Heading>
 
-        {/* Bidding Status */}
-        <div style={{ 
-          backgroundColor: '#dbeafe', 
-          border: '1px solid #bfdbfe', 
-          borderRadius: '8px', 
-          padding: '20px', 
-          marginBottom: '24px',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '12px' }}>⏰</div>
-          <h2 style={{ color: '#1e40af', fontSize: '20px', marginBottom: '8px' }}>
-            {daysLeft} Days Remaining
-          </h2>
-          <p style={{ color: '#1e40af', fontSize: '16px', fontWeight: 'bold' }}>
-            Bidding closes: {formatDate(biddingEndDate)}
-          </p>
-          <p style={{ color: '#374151', fontSize: '14px', marginTop: '12px' }}>
-            {participatingContractors} contractors are competing for this project
-          </p>
-        </div>
+            <Text style={BaseEmailStyles.text}>
+              안녕하세요, <strong>{businessName || contractorName}</strong>님!
+            </Text>
 
-        {/* Project Summary */}
-        <div style={{ 
-          backgroundColor: '#f8fafc', 
-          border: '1px solid #e2e8f0', 
-          borderRadius: '8px', 
-          padding: '20px', 
-          marginBottom: '24px' 
-        }}>
-          <h3 style={{ color: '#1f2937', fontSize: '18px', marginBottom: '16px' }}>
-            📋 Project Summary
-          </h3>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div>
-              <strong style={{ color: '#374151' }}>Category:</strong>
-              <div style={{ color: '#6b7280' }}>
-                {formatCategory(projectDetails.category)}
-              </div>
-            </div>
-            
-            <div>
-              <strong style={{ color: '#374151' }}>Budget:</strong>
-              <div style={{ color: '#6b7280' }}>
-                {formatBudgetRange(projectDetails.budget_range)}
-              </div>
-            </div>
-            
-            <div>
-              <strong style={{ color: '#374151' }}>Location:</strong>
-              <div style={{ color: '#6b7280' }}>
-                {projectDetails.postal_code}
-              </div>
-            </div>
-            
-            <div>
-              <strong style={{ color: '#374151' }}>Customer:</strong>
-              <div style={{ color: '#6b7280' }}>
-                {projectDetails.customer_name}
-              </div>
-            </div>
-          </div>
-        </div>
+            <Text style={BaseEmailStyles.text}>
+              현장 방문에 참여하신 프로젝트의 입찰이 시작되었습니다. 
+              경쟁력 있는 견적을 제출하여 프로젝트를 성공적으로 수주하세요!
+            </Text>
 
-        {/* Call to Action */}
-        <div style={{ 
-          backgroundColor: '#f0fdf4', 
-          border: '2px solid #10b981', 
-          borderRadius: '8px', 
-          padding: '24px', 
-          marginBottom: '24px',
-          textAlign: 'center'
-        }}>
-          <h2 style={{ color: '#047857', fontSize: '20px', marginBottom: '16px' }}>
-            🚀 Ready to Submit Your Bid?
-          </h2>
-          
-          <p style={{ color: '#065f46', marginBottom: '20px' }}>
-            Based on your inspection, provide a detailed and competitive quote to win this project.
-          </p>
-          
-          <a
-            href={`${process.env.NEXT_PUBLIC_APP_URL}/contractor/bid/${projectId}`}
-            style={{
-              backgroundColor: '#10b981',
-              color: 'white',
-              padding: '16px 32px',
-              borderRadius: '8px',
-              textDecoration: 'none',
-              fontWeight: 'bold',
-              fontSize: '18px',
-              display: 'inline-block',
-            }}
-          >
-            📝 Submit Your Bid Now
-          </a>
-        </div>
+            <Section style={BaseEmailStyles.highlightBox}>
+              <Heading as="h2" style={BaseEmailStyles.subHeading}>
+                📋 프로젝트 정보
+              </Heading>
+              
+              <ul style={BaseEmailStyles.list}>
+                <li style={BaseEmailStyles.listItem}>
+                  <strong>프로젝트 ID:</strong> {project.id}
+                </li>
+                <li style={BaseEmailStyles.listItem}>
+                  <strong>카테고리:</strong> {getCategoryText(project.category)}
+                </li>
+                <li style={BaseEmailStyles.listItem}>
+                  <strong>부동산 유형:</strong> {getPropertyTypeText(project.property_type)}
+                </li>
+                <li style={BaseEmailStyles.listItem}>
+                  <strong>예산 범위:</strong> {getBudgetRangeText(project.budget_range)}
+                </li>
+                <li style={BaseEmailStyles.listItem}>
+                  <strong>주소:</strong> {project.address}
+                </li>
+                <li style={BaseEmailStyles.listItem}>
+                  <strong>입찰 마감일:</strong> {formatDate(project.bidding_end_date)}
+                </li>
+              </ul>
 
-        {/* Bidding Tips */}
-        <div style={{ marginBottom: '24px' }}>
-          <h3 style={{ color: '#374151', fontSize: '16px', marginBottom: '12px' }}>
-            💡 Tips for a Winning Bid
-          </h3>
-          <ul style={{ color: '#6b7280', lineHeight: '1.6', paddingLeft: '20px' }}>
-            <li><strong>Be Detailed:</strong> Break down labor, materials, and additional costs clearly</li>
-            <li><strong>Be Realistic:</strong> Provide accurate timelines based on your inspection</li>
-            <li><strong>Be Competitive:</strong> {participatingContractors - 1} other contractors are bidding</li>
-            <li><strong>Be Professional:</strong> Include what&apos;s included and excluded in your quote</li>
-            <li><strong>Be Prompt:</strong> Early submissions often get more attention from customers</li>
-          </ul>
-        </div>
+              <Text style={BaseEmailStyles.description}>
+                <strong>프로젝트 설명:</strong><br />
+                {project.id}
+              </Text>
+            </Section>
 
-        {/* Inspection Reminder */}
-        <div style={{ 
-          backgroundColor: '#fef3c7', 
-          border: '1px solid #fcd34d', 
-          borderRadius: '8px', 
-          padding: '16px', 
-          marginBottom: '24px' 
-        }}>
-          <p style={{ color: '#92400e', margin: '0', fontSize: '14px' }}>
-            <strong>📋 Inspection Notes:</strong> Use the insights from your site visit to provide the most accurate quote possible. 
-            Consider any specific challenges or opportunities you identified during the inspection.
-          </p>
-        </div>
+            <Section style={BaseEmailStyles.ctaSection}>
+              <Text style={BaseEmailStyles.text}>
+                🚀 <strong>지금 바로 입찰서를 제출하세요!</strong>
+              </Text>
+              
+              <Button style={BaseEmailStyles.button} href={biddingUrl}>
+                입찰서 제출하기
+              </Button>
+            </Section>
 
-        {/* Competition Info */}
-        <div style={{ 
-          backgroundColor: '#fef2f2', 
-          border: '1px solid #fecaca', 
-          borderRadius: '8px', 
-          padding: '16px', 
-          marginBottom: '24px' 
-        }}>
-          <p style={{ color: '#991b1b', margin: '0', fontSize: '14px' }}>
-            <strong>⚡ Competition Alert:</strong> {participatingContractors} contractors are competing for this project. 
-            Make sure your bid stands out with competitive pricing and detailed project planning.
-          </p>
-        </div>
+            <Section style={BaseEmailStyles.infoBox}>
+              <Heading as="h3" style={BaseEmailStyles.subHeading}>
+                ⏰ 중요한 일정
+              </Heading>
+              
+              <Text style={BaseEmailStyles.text}>
+                • <strong>입찰 시작:</strong> {formatDate(new Date())}<br />
+                • <strong>입찰 마감:</strong> {formatDate(project.bidding_end_date)}<br />
+                • <strong>입찰 기간:</strong> 7일
+              </Text>
+              
+              <Text style={BaseEmailStyles.warning}>
+                ⚠️ 입찰 마감일을 놓치지 마세요! 마감 후에는 입찰서를 제출할 수 없습니다.
+          </Text>
+            </Section>
 
-        {/* Footer */}
-        <div style={{ 
-          borderTop: '1px solid #e5e7eb', 
-          paddingTop: '20px', 
-          textAlign: 'center',
-          color: '#6b7280',
-          fontSize: '14px'
-        }}>
-          <p>
-            Questions about bidding? Contact support at{' '}
-            <a href="mailto:support@renovateplatform.com" style={{ color: '#2563eb' }}>
-              support@renovateplatform.com
-            </a>
-          </p>
-          <p style={{ marginTop: '8px' }}>
-            <a 
-              href={`${process.env.NEXT_PUBLIC_APP_URL}/contractor/dashboard`}
-              style={{ color: '#2563eb', textDecoration: 'none' }}
-            >
-              View All Projects →
-            </a>
-          </p>
-        </div>
-      </div>
-    </BaseEmailTemplate>
+            <Section style={BaseEmailStyles.tipsSection}>
+              <Heading as="h3" style={BaseEmailStyles.subHeading}>
+                💡 입찰 성공 팁
+              </Heading>
+              
+              <ul style={BaseEmailStyles.list}>
+                <li style={BaseEmailStyles.listItem}>
+                  상세하고 정확한 견적서 작성
+                </li>
+                <li style={BaseEmailStyles.listItem}>
+                  경쟁력 있는 가격 제시
+                </li>
+                <li style={BaseEmailStyles.listItem}>
+                  명확한 작업 범위와 일정 제시
+                </li>
+                <li style={BaseEmailStyles.listItem}>
+                  고객의 요구사항을 정확히 파악하여 반영
+                </li>
+              </ul>
+            </Section>
+
+            <Hr style={BaseEmailStyles.divider} />
+
+            <Text style={BaseEmailStyles.footer}>
+              문의사항이 있으시면 언제든지 연락주세요.<br />
+              <Link href="mailto:support@renovate.com" style={BaseEmailStyles.link}>
+                support@renovate.com
+              </Link>
+            </Text>
+          </Section>
+        </Container>
+      </Body>
+    </Html>
   )
 }
+
+export default BiddingStartedEmail

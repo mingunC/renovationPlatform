@@ -12,7 +12,7 @@ export function ContractorDashboardTabs() {
     <Tabs defaultValue="new-requests" className="w-full">
       <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="new-requests">새 요청</TabsTrigger>
-        <TabsTrigger value="inspection">현장 방문 대기</TabsTrigger>
+        <TabsTrigger value="inspection">현장 방문 예정</TabsTrigger>
         <TabsTrigger value="bidding">입찰 진행중</TabsTrigger>
         <TabsTrigger value="my-bids">내 입찰</TabsTrigger>
       </TabsList>
@@ -41,17 +41,17 @@ export function ContractorDashboardTabs() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
-              현장 방문 대기
+              현장 방문 예정
             </h2>
             <p className="text-gray-600">
-              현장 방문 일정이 설정된 프로젝트들 - 참여 의사를 표시하세요
+              현장 방문에 참여하기로 한 프로젝트들 - 현장 방문 준비를 하세요
             </p>
           </div>
-          <div className="flex items-center space-x-2 text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-full">
+          <div className="flex items-center space-x-2 text-sm text-green-600 bg-green-50 px-3 py-1 rounded-full">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>빠른 응답 필요</span>
+            <span>참여 확정</span>
           </div>
         </div>
         <InspectionScheduledList />

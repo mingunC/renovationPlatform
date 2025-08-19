@@ -5,8 +5,8 @@ export interface RenovationFormData {
   // Step 1 - Property Type
   property_type: PropertyType | null
   
-  // Step 2 - Renovation Category
-  category: 'KITCHEN' | 'BATHROOM' | 'BASEMENT' | 'FLOORING' | 'PAINTING' | 'OTHER' | 'OFFICE' | 'RETAIL' | 'CAFE_RESTAURANT' | 'EDUCATION' | 'HOSPITALITY_HEALTHCARE' | null
+  // Step 2 - Renovation Category (now supports multiple selections)
+  category: string[]
   
   // Step 3 - Budget Range
   budget_range: 'UNDER_50K' | 'RANGE_50_100K' | 'OVER_100K' | null
@@ -27,7 +27,7 @@ export interface RenovationFormData {
 
 const initialFormData: RenovationFormData = {
   property_type: null,
-  category: null,
+  category: [],
   budget_range: null,
   timeline: null,
   postal_code: '',
@@ -65,7 +65,7 @@ export const useMultiStepForm = () => {
       case 1:
         return formData.property_type !== null
       case 2:
-        return formData.category !== null
+        return formData.category.length > 0
       case 3:
         return formData.budget_range !== null
       case 4:
@@ -113,8 +113,8 @@ export const useMultiStepForm = () => {
     totalSteps,
     formData,
     updateFormData,
-    nextStep,
-    prevStep,
+    goToNextStep: nextStep,
+    goToPreviousStep: prevStep,
     goToStep,
     canGoNext,
     canGoBack,

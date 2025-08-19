@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createSupabaseServerClient } from '@/lib/supabase';
 import { emailService } from '@/lib/email-service';
 
 export async function PATCH(
@@ -8,22 +7,22 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Check admin session from cookie (same as other admin APIs)
+    const adminSession = request.cookies.get('admin_session');
 
-    if (authError || !user) {
+    if (!adminSession) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'No admin session found' },
         { status: 401 }
       );
     }
 
-    // Check if user is admin
+    // Verify user is admin
     const dbUser = await prisma.user.findUnique({
-      where: { id: user.id }
+      where: { id: adminSession.value }
     });
 
-    if (dbUser?.type !== 'CUSTOMER') { // Note: You may need to add ADMIN type
+    if (!dbUser || dbUser.type !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Admin access required' },
         { status: 403 }
@@ -32,7 +31,7 @@ export async function PATCH(
 
     const body = await request.json();
     const { id } = await params;
-    const { inspection_date } = body;
+    const { inspection_date, notes } = body;
 
     if (!inspection_date) {
       return NextResponse.json(
@@ -48,6 +47,8 @@ export async function PATCH(
       where: { id },
       data: {
         inspection_date: inspectionDate,
+        inspection_time: null, // 시간 설정 기능 제거
+        inspection_notes: notes || null,
         status: 'INSPECTION_SCHEDULED',
         // Bidding starts at midnight on inspection date
         bidding_start_date: inspectionDate,

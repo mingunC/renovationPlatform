@@ -1,246 +1,263 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { supabase } from '@/lib/supabase'
-import type { User } from '@supabase/supabase-js'
+import { useEffect, useRef, useState } from 'react';
+import { createClient } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 interface UserProfile {
-  id: string
-  email: string
-  name: string | null
-  type: 'CUSTOMER' | 'CONTRACTOR'
+  id: string;
+  email: string;
+  name: string | null;
+  type: 'CUSTOMER' | 'CONTRACTOR' | 'ADMIN';
   contractor?: {
-    id: string
-    business_name: string
-    phone: string
-    service_categories: string[]
-    service_areas: string[]
-    years_experience: number
-    license_number: string | null
-    insurance_info: string | null
-    website: string | null
-    bio: string | null
-    hourly_rate: number | null
-    profile_completed: boolean
-    verified: boolean
-  }
+    id: string;
+    business_name: string;
+    profile_completed: boolean;
+  };
 }
 
 export function Header() {
-  const [user, setUser] = useState<User | null>(null)
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const router = useRouter()
+  const [user, setUser] = useState<any>(null); // Supabase user
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null); // Database profile
+  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false); // Hydration 방지용
+  const processingAuth = useRef(false);
+  const router = useRouter();
+  
+  // Create Supabase client instance
+  const supabase = createClient();
 
+  // 클라이언트에서만 렌더링되도록 보장
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user || null)
+    if (!mounted) return; // 클라이언트 마운트 전에는 실행하지 않음
 
-      if (session?.user) {
-        try {
-          const response = await fetch(`/api/auth/profile?id=${session.user.id}`)
-          if (response.ok) {
-            const { user: profile } = await response.json()
-            setUserProfile(profile)
-          }
-        } catch (error) {
-          console.error('Error fetching user profile:', error)
-        }
+    const handleAuthChange = async (event: string, session: any) => {
+      console.log('🔄 Auth state changed:', event, session?.user?.id);
+      
+      // 중복 처리 방지
+      if (processingAuth.current) {
+        console.log('⏸️ Auth processing already in progress...');
+        return;
       }
-      setLoading(false)
-    }
 
-    getUser()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user || null)
-      if (session?.user) {
-        try {
-          const response = await fetch(`/api/auth/profile?id=${session.user.id}`)
-          if (response.ok) {
-            const { user: profile } = await response.json()
-            setUserProfile(profile)
-          }
-        } catch (error) {
-          console.error('Error fetching user profile:', error)
-        }
-      } else {
-        setUserProfile(null)
+      if (!session?.user?.id) {
+        setUser(null);
+        setUserProfile(null);
+        setLoading(false);
+        return;
       }
-    })
 
-    return () => subscription.unsubscribe()
-  }, [supabase.auth])
+      processingAuth.current = true;
+      
+      try {
+        const userId = session.user.id;
+        const userEmail = session.user.email;
+        const userName = session.user.user_metadata?.name || 
+                        session.user.user_metadata?.full_name ||
+                        userEmail?.split('@')[0] || 
+                        'Unknown';
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/')
-  }
+        console.log('📝 Processing user profile:', { userId, userEmail, userName });
 
-  const getNavigationLinks = () => {
-    if (!userProfile) return []
+        // 사용자 프로필 생성/업데이트
+        const response = await fetch('/api/auth/profile', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+          },
+          body: JSON.stringify({
+            id: userId,
+            email: userEmail,
+            name: userName
+          })
+        });
 
-    if (userProfile.type === 'CUSTOMER') {
-      return [
-        { href: '/request', label: 'Submit Request' },
-        { href: '/my-projects', label: 'My Projects' },
-        { href: '/compare', label: 'Compare Bids' },
-      ]
-    } else if (userProfile.type === 'CONTRACTOR') {
-      return [
-        { href: '/dashboard', label: 'Dashboard' },
-        { href: '/bids', label: 'My Bids' },
-        { href: '/bid', label: 'Browse Requests' },
-      ]
+        if (response.ok) {
+          const data = await response.json();
+          console.log('✅ User profile processed successfully:', data.user);
+          setUser(session.user); // Supabase user
+          setUserProfile(data.user); // Database profile
+        } else {
+          const errorData = await response.json();
+          console.error('❌ Profile processing failed:', response.status, errorData);
+          
+          // 실패해도 기본 사용자 정보는 설정
+          setUser(session.user);
+          setUserProfile({
+            id: userId,
+            email: userEmail,
+            name: userName,
+            type: 'CONTRACTOR' // 기본값을 CONTRACTOR로 변경
+          });
+        }
+
+      } catch (error) {
+        console.error('❌ Auth processing error:', error);
+        
+        // 에러 발생해도 기본 사용자 정보는 설정
+        setUser(session.user);
+        setUserProfile({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.name || 'Unknown',
+          type: 'CONTRACTOR'
+        });
+      } finally {
+        processingAuth.current = false;
+        setLoading(false);
+      }
+    };
+
+    // 초기 세션 확인
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleAuthChange('INITIAL_SESSION', session);
+    });
+
+    // 인증 상태 변경 리스너
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [mounted]);
+
+  // 로그아웃 처리
+  const handleLogout = async () => {
+    try {
+      setLoading(true);
+      await supabase.auth.signOut();
+      setUser(null);
+      setUserProfile(null);
+      router.push('/');
+      console.log('👋 User logged out successfully');
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    return []
-  }
-
-  const navigationLinks = getNavigationLinks()
-
-  return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">R</span>
+  // 클라이언트 마운트 전에는 기본 skeleton UI 표시
+  if (!mounted) {
+    return (
+      <header className="bg-white shadow-sm border-b">
+        <div className="container mx-auto px-4">
+                  <div className="flex items-center justify-between h-16">
+          {/* 왼쪽: 로고 */}
+          <div className="flex items-center">
+            <a href="/" className="text-xl font-bold text-blue-600">
+              리노베이트 플랫폼
+            </a>
+          </div>
+          
+          {/* 중앙: 네비게이션 메뉴 (로딩 중에는 숨김) */}
+          <nav className="flex-1 flex justify-center">
+            <div className="flex items-center space-x-6">
+              {/* 로딩 중에는 메뉴 숨김 */}
             </div>
-            <span className="text-xl font-bold text-gray-900">Renovate Platform</span>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
-            {navigationLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
-              >
-                {link.label}
-              </Link>
-            ))}
           </nav>
-
-          {/* User Actions */}
-          <div className="flex items-center space-x-4">
-            {loading ? (
-              <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />
-            ) : user ? (
-              <div className="flex items-center space-x-4">
-                {/* User Info */}
-                <div className="hidden sm:flex items-center space-x-2">
-                  <div className="text-sm">
-                    <p className="font-medium text-gray-900">
-                      {userProfile?.type === 'CONTRACTOR' && userProfile.contractor?.business_name
-                        ? userProfile.contractor.business_name
-                        : userProfile?.name || user.email}
-                    </p>
-                    <p className="text-gray-500 text-xs">
-                      {userProfile?.type === 'CONTRACTOR' ? 'Contractor' : 'Customer'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Settings */}
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/settings">Settings</Link>
-                </Button>
-
-                {/* Sign Out */}
-                <Button variant="outline" size="sm" onClick={handleSignOut}>
-                  Sign Out
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/login">Sign In</Link>
-                </Button>
-                <Button asChild size="sm">
-                  <Link href="/register">Get Started</Link>
-                </Button>
-              </div>
-            )}
-
-            {/* Mobile Menu Button */}
-            <button
-              className="md:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                {isMenuOpen ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                )}
-              </svg>
-            </button>
+            <div className="flex items-center space-x-4">
+              <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+            </div>
           </div>
         </div>
+      </header>
+    );
+  }
 
-        {/* Mobile Navigation Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 py-4">
-            <nav className="flex flex-col space-y-2">
-              {navigationLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-gray-600 hover:text-gray-900 font-medium py-2 transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              {user && (
+  return (
+    <header className="bg-white shadow-sm border-b">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* 왼쪽: 로고 */}
+          <div className="flex items-center">
+            <a href="/" className="text-xl font-bold text-blue-600">
+              리노베이트 플랫폼
+            </a>
+          </div>
+          
+          {/* 중앙: 네비게이션 메뉴 */}
+          <nav className="flex-1 flex justify-center">
+            <div className="flex items-center space-x-6">
+              {userProfile?.type === 'CONTRACTOR' && (
                 <>
-                  <hr className="my-2" />
-                  <Link
-                    href="/settings"
-                    className="text-gray-600 hover:text-gray-900 font-medium py-2 transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Settings
-                  </Link>
-                  <button
-                    onClick={() => {
-                      handleSignOut()
-                      setIsMenuOpen(false)
-                    }}
-                    className="text-gray-600 hover:text-gray-900 font-medium py-2 transition-colors text-left"
-                  >
-                    Sign Out
-                  </button>
+                  <a href="/dashboard" className="text-gray-600 hover:text-blue-600">
+                    🏗️ 대시보드
+                  </a>
+                  <a href="/bids" className="text-gray-600 hover:text-blue-600">
+                    내 입찰
+                  </a>
+                  <a href="/bid" className="text-gray-600 hover:text-blue-600">
+                    프로젝트 둘러보기
+                  </a>
                 </>
               )}
-            </nav>
+              {userProfile?.type === 'CUSTOMER' && (
+                <>
+                  <a href="/my-projects" className="text-gray-600 hover:text-blue-600">
+                    내 프로젝트
+                  </a>
+                  <a href="/compare" className="text-gray-600 hover:text-blue-600">
+                    견적 비교
+                  </a>
+                </>
+              )}
+            </div>
+          </nav>
+          
+          <div className="flex items-center space-x-4">
+            {loading ? (
+              <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+            ) : user ? (
+              <div className="flex items-center space-x-3">
+                <div className="flex flex-col items-end">
+                  <span className="text-gray-700 font-medium">
+                    {userProfile?.name || user.email?.split('@')[0] || 'User'}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {userProfile?.type === 'CONTRACTOR' ? 
+                      `🏗️ ${userProfile.contractor?.business_name || 'Contractor'}` : 
+                     userProfile?.type === 'CUSTOMER' ? '👤 Customer' : 
+                     userProfile?.type === 'ADMIN' ? '⚡ Admin' : 'User'}
+                  </span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="text-gray-600 hover:text-red-600 transition-colors"
+                >
+                  로그아웃
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <a 
+                  href="/login" 
+                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  👤 고객 로그인
+                </a>
+                <a 
+                  href="/register" 
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  📝 회원가입
+                </a>
+                <a 
+                  href="/contractor-login" 
+                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                >
+                  🏗️ 업체 로그인
+                </a>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </header>
-  )
+  );
 }

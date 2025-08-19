@@ -12,7 +12,7 @@ export const userSchema = z.object({
 // Request Schemas
 export const createRequestSchema = z.object({
   property_type: z.enum(['DETACHED_HOUSE', 'TOWNHOUSE', 'CONDO', 'COMMERCIAL']),
-  category: z.enum(['KITCHEN', 'BATHROOM', 'BASEMENT', 'FLOORING', 'PAINTING', 'OTHER']),
+  category: z.array(z.enum(['KITCHEN', 'BATHROOM', 'BASEMENT', 'FLOORING', 'PAINTING', 'OTHER', 'OFFICE', 'RETAIL', 'CAFE_RESTAURANT', 'EDUCATION', 'HOSPITALITY_HEALTHCARE'])).min(1, 'At least one category must be selected'),
   budget_range: z.enum(['UNDER_50K', 'RANGE_50_100K', 'OVER_100K']),
   timeline: z.enum(['ASAP', 'WITHIN_1MONTH', 'WITHIN_3MONTHS', 'PLANNING']),
   postal_code: z.string().regex(/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/, 'Invalid Canadian postal code'),
@@ -31,7 +31,7 @@ export const updateRequestSchema = z.object({
 export const requestFiltersSchema = z.object({
   property_type: z.enum(['DETACHED_HOUSE', 'TOWNHOUSE', 'CONDO', 'COMMERCIAL']).optional(),
   status: z.enum(['OPEN', 'CLOSED', 'COMPLETED']).optional(),
-  category: z.enum(['KITCHEN', 'BATHROOM', 'BASEMENT', 'FLOORING', 'PAINTING', 'OTHER']).optional(),
+  category: z.array(z.enum(['KITCHEN', 'BATHROOM', 'BASEMENT', 'FLOORING', 'PAINTING', 'OTHER', 'OFFICE', 'RETAIL', 'CAFE_RESTAURANT', 'EDUCATION', 'HOSPITALITY_HEALTHCARE'])).optional(),
   budget_range: z.enum(['UNDER_50K', 'RANGE_50_100K', 'OVER_100K']).optional(),
   timeline: z.enum(['ASAP', 'WITHIN_1MONTH', 'WITHIN_3MONTHS', 'PLANNING']).optional(),
   postal_code: z.string().optional(),
@@ -45,20 +45,17 @@ export const requestFiltersSchema = z.object({
 
 // Bid Schemas
 export const createBidSchema = z.object({
-  request_id: z.string().uuid(),
-  labor_cost: z.number().min(0, 'Labor cost must be positive'),
-  material_cost: z.number().min(0, 'Material cost must be positive'),
-  permit_cost: z.number().min(0, 'Permit cost must be non-negative').default(0),
-  disposal_cost: z.number().min(0, 'Disposal cost must be non-negative').default(0),
-  timeline_weeks: z.number().int().min(1, 'Timeline must be at least 1 week').max(52, 'Timeline cannot exceed 52 weeks'),
-  start_date: z.string().refine((date) => {
-    const startDate = new Date(date)
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    return startDate >= tomorrow
-  }, 'Start date must be at least tomorrow'),
-  included_items: z.string().min(10, 'Please describe what is included (minimum 10 characters)'),
+  project_id: z.string().min(1, "Project ID is required"),
+  total_amount: z.number().min(1, "Total amount must be greater than 0"),
+  timeline_weeks: z.number().min(1, "Timeline must be at least 1 week"),
+  start_date: z.string().optional(),
+  labor_cost: z.number().default(0),
+  material_cost: z.number().default(0),
+  permit_cost: z.number().default(0),
+  disposal_cost: z.number().default(0),
+  included_items: z.string().optional(),
   excluded_items: z.string().optional(),
+  estimate_file_url: z.string().optional(), // URL 검증 제거, 선택사항으로 변경
   notes: z.string().optional(),
 })
 

@@ -47,14 +47,10 @@ export interface CreateRenovationRequestData {
 
 export interface CreateBidData {
   request_id: string
-  labor_cost: number
-  material_cost: number
-  permit_cost?: number
-  disposal_cost?: number
-  timeline_weeks: number
+  total_amount: number
+  estimate_file_url: string
+  timeline_weeks?: number
   start_date?: Date
-  included_items?: string
-  excluded_items?: string
   notes?: string
 }
 

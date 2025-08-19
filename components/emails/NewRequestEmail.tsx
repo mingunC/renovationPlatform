@@ -5,8 +5,9 @@ import {
   Column,
   Text,
   Hr,
+  Button,
 } from '@react-email/components'
-import { BaseEmailTemplate, EmailButton, EmailBadge } from './BaseEmailTemplate'
+import { BaseEmailTemplate, EmailBadge } from './BaseEmailTemplate'
 
 interface NewRequestEmailProps {
   contractorName: string
@@ -186,13 +187,16 @@ export function NewRequestEmail({ contractorName, request }: NewRequestEmailProp
 
       {/* Call to Action */}
       <Section style={ctaSection}>
-        <EmailButton href={bidUrl}>
+        <Button href={bidUrl} style={ctaButtonStyle}>
           Submit Your Bid
-        </EmailButton>
+        </Button>
         
         <Text style={ctaSubtext}>
           Don't wait! Early bids often get more attention from homeowners.
         </Text>
+        <Button href={dashboardUrl} style={secondaryCtaButtonStyle}>
+          Browse Other Opportunities
+        </Button>
       </Section>
 
       <Hr style={sectionDivider} />
@@ -224,9 +228,9 @@ export function NewRequestEmail({ contractorName, request }: NewRequestEmailProp
         <Text style={secondaryCtaText}>
           Not interested in this project?
         </Text>
-        <EmailButton href={dashboardUrl} variant="secondary">
+        <Button href={dashboardUrl} variant="secondary">
           Browse Other Opportunities
-        </EmailButton>
+        </Button>
       </Section>
     </BaseEmailTemplate>
   )
@@ -347,4 +351,34 @@ const listItem = {
   color: '#374151',
   margin: '0 0 8px 0',
   lineHeight: '22px',
+}
+
+const ctaButtonStyle = {
+  marginBottom: '16px',
+  width: '100%',
+  padding: '12px 24px',
+  fontSize: '16px',
+  fontWeight: 'bold',
+  color: '#ffffff',
+  backgroundColor: '#4f46e5',
+  borderRadius: '8px',
+  border: 'none',
+  cursor: 'pointer',
+  textDecoration: 'none',
+  display: 'inline-block',
+}
+
+const secondaryCtaButtonStyle = {
+  marginTop: '16px',
+  width: '100%',
+  padding: '12px 24px',
+  fontSize: '16px',
+  fontWeight: 'bold',
+  color: '#4f46e5',
+  backgroundColor: 'transparent',
+  borderRadius: '8px',
+  border: '1px solid #4f46e5',
+  cursor: 'pointer',
+  textDecoration: 'none',
+  display: 'inline-block',
 }

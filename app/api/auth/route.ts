@@ -1,11 +1,11 @@
+import { createServerActionClient } from '@/lib/supabase-server'
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password, type } = await request.json()
     
-    const supabase = await createSupabaseServerClient()
+    const supabase = await createServerActionClient()
     
     // Handle sign up
     if (type === 'signup') {
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(_request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient()
+    const supabase = await createServerActionClient()
     
     const { error } = await supabase.auth.signOut()
     

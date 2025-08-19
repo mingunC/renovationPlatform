@@ -3,6 +3,9 @@ import { Resend } from 'resend'
 import { NewRequestEmail } from '@/components/emails/NewRequestEmail'
 import { NewBidEmail } from '@/components/emails/NewBidEmail'
 import { BidAcceptedEmail } from '@/components/emails/BidAcceptedEmail'
+import { BiddingStartedEmail } from '@/components/emails/BiddingStartedEmail'
+import { BiddingClosedEmail } from '@/components/emails/BiddingClosedEmail'
+import { ContractorSelectionEmail } from '@/components/emails/ContractorSelectionEmail'
 
 const resend = new Resend(process.env.RESEND_API_KEY || 'dummy-key')
 
@@ -380,6 +383,126 @@ The Renovate Platform Team
     }
   }
 
+  // Bidding started notification email
+  async sendBiddingStartedEmail(
+    contractorEmail: string,
+    contractorName: string,
+    businessName: string | undefined,
+    projectData: any
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const html = await render(BiddingStartedEmail({
+        contractorName,
+        businessName,
+        project: projectData,
+        customerName: projectData.customer?.name || '고객',
+        biddingUrl: `${process.env.NEXT_PUBLIC_APP_URL}/contractor/bid/${projectData.id}`,
+      }))
+
+      const result = await resend.emails.send({
+        from: 'Renovate Platform <notifications@renovateplatform.com>',
+        to: contractorEmail,
+        subject: `🎯 ${this.formatCategory(projectData.category)} 프로젝트 입찰이 시작되었습니다!`,
+        html,
+        headers: {
+          'X-Entity-Ref-ID': projectData.id,
+        },
+        tags: [
+          { name: 'category', value: 'bidding-started' },
+          { name: 'project-type', value: projectData.category.toLowerCase() },
+        ],
+      })
+
+      return { success: true }
+    } catch (error) {
+      console.error('Failed to send bidding started email:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      }
+    }
+  }
+
+  // Bidding closed notification email
+  async sendBiddingClosedEmail(
+    customerEmail: string,
+    customerName: string,
+    projectData: any,
+    bidsData: any[]
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const html = await render(BiddingClosedEmail({
+        customerName,
+        project: projectData,
+        bids: bidsData,
+        projectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/customer/projects/${projectData.id}`,
+      }))
+
+      const result = await resend.emails.send({
+        from: 'Renovate Platform <notifications@renovateplatform.com>',
+        to: customerEmail,
+        subject: `🏁 ${this.formatCategory(projectData.category)} 프로젝트 입찰이 마감되었습니다!`,
+        html,
+        headers: {
+          'X-Entity-Ref-ID': projectData.id,
+        },
+        tags: [
+          { name: 'category', value: 'bidding-closed' },
+          { name: 'project-type', value: projectData.category.toLowerCase() },
+        ],
+      })
+
+      return { success: true }
+    } catch (error) {
+      console.error('Failed to send bidding closed email:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      }
+    }
+  }
+
+  // Contractor selection notification email
+  async sendContractorSelectionEmail(
+    customerEmail: string,
+    customerName: string,
+    projectData: any,
+    selectedContractorData: any,
+    bidData: any
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const html = await render(ContractorSelectionEmail({
+        customerName,
+        project: projectData,
+        selectedContractor: selectedContractorData,
+        bid: bidData,
+        projectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/customer/projects/${projectData.id}`,
+      }))
+
+      const result = await resend.emails.send({
+        from: 'Renovate Platform <notifications@renovateplatform.com>',
+        to: customerEmail,
+        subject: `🎉 ${this.formatCategory(projectData.category)} 프로젝트 업체가 선정되었습니다!`,
+        html,
+        headers: {
+          'X-Entity-Ref-ID': projectData.id,
+        },
+        tags: [
+          { name: 'category', value: 'contractor-selected' },
+          { name: 'project-type', value: projectData.category.toLowerCase() },
+        ],
+      })
+
+      return { success: true }
+    } catch (error) {
+      console.error('Failed to send contractor selection email:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      }
+    }
+  }
+
   // Simple notification method for basic emails
   async sendSimpleNotification(
     to: string,
@@ -398,6 +521,30 @@ The Renovate Platform Team
       return { success: true }
     } catch (error) {
       console.error('Failed to send simple notification:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      }
+    }
+  }
+
+  // Send email with HTML content
+  async sendEmail(options: {
+    to: string;
+    subject: string;
+    html: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      const result = await resend.emails.send({
+        from: 'Renovate Platform <notifications@renovateplatform.com>',
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+      })
+
+      return { success: true }
+    } catch (error) {
+      console.error('Failed to send email:', error)
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
@@ -430,3 +577,27 @@ The Renovate Platform Team
 
 // Export singleton instance
 export const emailService = EmailService.getInstance()
+
+// Simple sendEmail function for basic email sending
+export async function sendEmail(options: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  try {
+    const result = await resend.emails.send({
+      from: 'Renovate Platform <notifications@renovateplatform.com>',
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+    })
+
+    return { success: true, data: result }
+  } catch (error) {
+    console.error('Failed to send email:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    }
+  }
+}

@@ -57,7 +57,7 @@ export default function HomePage() {
                 <li>• Manage your projects</li>
               </ul>
               <Button asChild className="mt-4 w-full">
-                <Link href="/dashboard">Contractor Dashboard</Link>
+                <Link href="/contractor-login">업체 로그인</Link>
               </Button>
             </CardContent>
           </Card>

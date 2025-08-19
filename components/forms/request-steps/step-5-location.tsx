@@ -527,9 +527,12 @@ export function LocationStep({ postalCode, address, city, inspectionDate, onUpda
             </svg>
           </div>
           <div>
-            <h4 className="font-medium text-green-800 mb-1">Privacy Protected</h4>
-            <p className="text-sm text-green-700">
-              The address above will be used for on-site inspections. Your phone number and email will only be shared with contractors. We use your location to find the best local professionals.
+            <h4 className="font-medium text-green-800 mb-1">개인정보 보호 / Privacy Protected</h4>
+            <p className="text-sm text-green-700 mb-2">
+              위 주소는 현장 실측에 사용됩니다. 귀하의 전화번호와 이메일은 업체들과만 공유됩니다.
+            </p>
+            <p className="text-xs text-green-600 italic">
+              The address above will be used for on-site inspections. Your phone number and email will only be shared with contractors.
             </p>
           </div>
         </div>

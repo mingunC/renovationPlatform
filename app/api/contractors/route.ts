@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { createSupabaseServerClient } from '@/lib/supabase'
+import { createServerActionClient } from '@/lib/supabase-server'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient()
+    const supabase = await createServerActionClient()
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient()
+    const supabase = await createServerActionClient()
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {

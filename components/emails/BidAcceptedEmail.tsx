@@ -5,8 +5,9 @@ import {
   Column,
   Text,
   Hr,
+  Button,
 } from '@react-email/components'
-import { BaseEmailTemplate, EmailButton, EmailBadge } from './BaseEmailTemplate'
+import { BaseEmailTemplate, EmailBadge } from './BaseEmailTemplate'
 
 interface BidAcceptedEmailProps {
   contractorName: string
@@ -214,13 +215,16 @@ export function BidAcceptedEmail({ contractorName, bid, customer, request }: Bid
 
       {/* Call to Action */}
       <Section style={ctaSection}>
-        <EmailButton href={projectUrl}>
+        <Button href={projectUrl} style={ctaButtonStyle}>
           View Project Details
-        </EmailButton>
+        </Button>
         
         <Text style={ctaSubtext}>
-          Access your project dashboard to manage this renovation
+          Ready to start building your reputation?
         </Text>
+        <Button href={dashboardUrl} style={secondaryCtaButtonStyle}>
+          Go to Dashboard
+        </Button>
       </Section>
 
       <Hr style={sectionDivider} />
@@ -271,9 +275,9 @@ export function BidAcceptedEmail({ contractorName, bid, customer, request }: Bid
         <Text style={secondaryCtaText}>
           Ready to start building your reputation?
         </Text>
-        <EmailButton href={dashboardUrl} variant="secondary">
+        <Button href={dashboardUrl} variant="secondary">
           Go to Dashboard
-        </EmailButton>
+        </Button>
       </Section>
     </BaseEmailTemplate>
   )
@@ -482,4 +486,32 @@ const supportText = {
   color: '#3730a3',
   lineHeight: '20px',
   margin: '0',
+}
+
+const ctaButtonStyle = {
+  marginBottom: '16px',
+  padding: '12px 24px',
+  borderRadius: '8px',
+  backgroundColor: '#059669',
+  color: '#ffffff',
+  fontSize: '16px',
+  fontWeight: 'bold',
+  border: 'none',
+  cursor: 'pointer',
+  textDecoration: 'none',
+  display: 'inline-block',
+}
+
+const secondaryCtaButtonStyle = {
+  marginTop: '16px',
+  padding: '12px 24px',
+  borderRadius: '8px',
+  backgroundColor: '#6366f1',
+  color: '#ffffff',
+  fontSize: '16px',
+  fontWeight: 'bold',
+  border: 'none',
+  cursor: 'pointer',
+  textDecoration: 'none',
+  display: 'inline-block',
 }

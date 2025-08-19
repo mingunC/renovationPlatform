@@ -14,6 +14,8 @@ interface InspectionRequest {
   address: string
   description: string
   inspection_date: string
+  inspection_time?: string
+  notes?: string
   created_at: string
   customer: {
     name: string
@@ -35,27 +37,74 @@ export function InspectionScheduledList() {
 
   const fetchInspectionRequests = async () => {
     try {
-      const response = await fetch('/api/requests?status=INSPECTION_SCHEDULED')
+      console.log('🔍 Fetching inspection requests...')
+      // 현장 방문에 참여하기로 한 프로젝트들만 가져오기
+      const response = await fetch('/api/contractor/inspection-interest')
+      console.log('📡 Response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
-        setRequests(data.requests || [])
+        console.log('📦 API Response:', data)
+        
+        if (data.success && data.data) {
+          console.log('📋 Raw inspection interests:', data.data)
+          console.log('📋 Data structure check:', {
+            success: data.success,
+            dataType: typeof data.data,
+            isArray: Array.isArray(data.data),
+            length: Array.isArray(data.data) ? data.data.length : 'N/A',
+            firstItem: Array.isArray(data.data) && data.data.length > 0 ? data.data[0] : 'N/A'
+          })
+          
+          // will_participate가 true이고 현장 방문 단계인 프로젝트들만 필터링
+          const participatingRequests = data.data
+            .filter((interest: any) => {
+              // 현장 방문 참여 의사가 있고
+              const hasParticipation = interest.will_participate === true
+              // 프로젝트 상태가 현장 방문 단계인 경우만 (BIDDING_OPEN 제외)
+              const isInspectionPhase = interest.request.status === 'INSPECTION_PENDING' || 
+                                       interest.request.status === 'INSPECTION_SCHEDULED'
+              
+              console.log(`🔍 Project ${interest.request.id}: status=${interest.request.status}, will_participate=${interest.will_participate}, isInspectionPhase=${isInspectionPhase}`)
+              
+              return hasParticipation && isInspectionPhase
+            })
+            .map((interest: any) => ({
+              ...interest.request,
+              inspection_interest: {
+                will_participate: interest.will_participate,
+                created_at: interest.created_at
+              }
+            }))
+          
+          console.log('🔍 Filtered participating requests:', participatingRequests.map((r: any) => ({
+            id: r.id,
+            status: r.status,
+            inspection_date: r.inspection_date,
+            will_participate: r.inspection_interest?.will_participate
+          })))
+          
+          console.log('✅ Filtered participating requests:', participatingRequests)
+          setRequests(participatingRequests)
+        } else {
+          console.log('❌ API response structure invalid:', data)
+          setRequests([])
+        }
+      } else {
+        console.error('❌ API response not ok:', response.status, response.statusText)
+        const errorData = await response.json().catch(() => ({}))
+        console.error('❌ Error details:', errorData)
       }
     } catch (error) {
-      console.error('Error fetching inspection requests:', error)
+      console.error('❌ Error fetching inspection requests:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleInspectionInterest = async (requestId: string, willParticipate: boolean) => {
+  const handleCancelParticipation = async (requestId: string) => {
     setSubmittingInterest(requestId)
     try {
-      // Mock 데이터인 경우 시뮬레이션된 API 호출
-      if (requestId.startsWith('mock-')) {
-        // Mock 환경에서는 실제 API 호출로 처리 (Mock 엔드포인트가 처리함)
-        // fallthrough to actual API call
-      }
-
       const response = await fetch('/api/contractor/inspection-interest', {
         method: 'POST',
         headers: {
@@ -63,17 +112,17 @@ export function InspectionScheduledList() {
         },
         body: JSON.stringify({
           request_id: requestId,
-          will_participate: willParticipate,
+          will_participate: false,
         }),
       })
 
       if (response.ok) {
-        // 성공적으로 제출된 경우
-        const successMessage = willParticipate ? '✅ 현장 방문 참여가 확정되었습니다!' : '❌ 현장 방문 불참으로 등록되었습니다.'
+        // 성공적으로 취소된 경우
+        const successMessage = '❌ 현장 방문 참여가 취소되었습니다. 프로젝트가 새 요청 탭으로 이동됩니다.'
         
         // 성공 알림 표시
         const notification = document.createElement('div')
-        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300'
+        notification.className = 'fixed top-4 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300'
         notification.textContent = successMessage
         document.body.appendChild(notification)
         
@@ -88,35 +137,12 @@ export function InspectionScheduledList() {
         await fetchInspectionRequests() // 목록 새로고침
       } else {
         const errorData = await response.json()
-        console.error('Error submitting inspection interest:', errorData)
-        
-        // 구체적인 에러 메시지 표시
-        let errorMessage = '참여 의사 등록 중 오류가 발생했습니다.'
-        
-        if (response.status === 401) {
-          errorMessage = '로그인이 필요합니다. 다시 로그인해 주세요.'
-        } else if (response.status === 404) {
-          if (errorData.error?.includes('Contractor profile')) {
-            errorMessage = '업체 프로필이 없습니다. 업체 등록을 완료해 주세요.'
-          } else {
-            errorMessage = '요청을 찾을 수 없습니다.'
-          }
-        } else if (response.status === 400) {
-          if (errorData.error?.includes('not accepting inspection')) {
-            errorMessage = '현재 현장 방문 참여 접수가 마감되었습니다.'
-          } else if (errorData.error?.includes('date has already passed')) {
-            errorMessage = '현장 방문 일정이 이미 지났습니다.'
-          } else if (errorData.error?.includes('does not handle this category')) {
-            errorMessage = '이 카테고리는 귀하의 전문 분야가 아닙니다.'
-          } else {
-            errorMessage = errorData.error || '잘못된 요청입니다.'
-          }
-        }
+        console.error('Error canceling participation:', errorData)
         
         // 에러 알림 표시
         const errorNotification = document.createElement('div')
         errorNotification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300'
-        errorNotification.textContent = errorMessage
+        errorNotification.textContent = '참여 취소 중 오류가 발생했습니다.'
         document.body.appendChild(errorNotification)
         
         // 5초 후 알림 제거
@@ -128,7 +154,7 @@ export function InspectionScheduledList() {
         }, 5000)
       }
     } catch (error) {
-      console.error('Error submitting inspection interest:', error)
+      console.error('Error canceling participation:', error)
       // 네트워크 에러 알림 표시
       const networkErrorNotification = document.createElement('div')
       networkErrorNotification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300'
@@ -232,8 +258,8 @@ export function InspectionScheduledList() {
       <Card>
         <CardContent className="p-8 text-center">
           <div className="text-gray-400 text-4xl mb-4">📅</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">현장 방문 대기 중인 요청이 없습니다</h3>
-          <p className="text-gray-600">새로운 현장 방문 일정이 설정되면 여기에 표시됩니다.</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">현장 방문 예정인 프로젝트가 없습니다</h3>
+          <p className="text-gray-600">새 요청 탭에서 현장 방문에 참여하기로 한 프로젝트가 여기에 표시됩니다.</p>
         </CardContent>
       </Card>
     )
@@ -247,7 +273,7 @@ export function InspectionScheduledList() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <AlertDescription>
-          현장 방문 일정이 설정된 프로젝트들입니다. 참여 의사를 빠르게 표시하여 입찰 기회를 확보하세요.
+          현장 방문에 참여하기로 한 프로젝트들입니다. 현장 방문 준비를 하고 필요시 참여를 취소할 수 있습니다.
         </AlertDescription>
       </Alert>
 
@@ -283,13 +309,35 @@ export function InspectionScheduledList() {
                       </svg>
                       <span className="font-medium text-blue-900">현장 방문 일정</span>
                     </div>
-                    <p className="text-blue-800 font-bold text-lg">
-                      {formatDate(request.inspection_date)}
-                    </p>
-                    <p className="text-blue-700 text-sm mt-1">
+                    <div className="flex items-center space-x-4 mb-2">
+                      <p className="text-blue-800 font-bold text-lg">
+                        📅 {formatDate(request.inspection_date)}
+                      </p>
+                      {request.inspection_time && (
+                        <p className="text-blue-700 font-medium">
+                          🕐 {request.inspection_time}
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-blue-700 text-sm">
                       📍 {request.address}
                     </p>
                   </div>
+
+                  {/* 관리자 메모 */}
+                  {request.notes && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="font-medium text-yellow-900">관리자 메모</span>
+                      </div>
+                      <p className="text-yellow-800 text-sm leading-relaxed">
+                        {request.notes}
+                      </p>
+                    </div>
+                  )}
 
                   {/* 프로젝트 정보 */}
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
@@ -318,30 +366,15 @@ export function InspectionScheduledList() {
 
                 {/* 액션 버튼 */}
                 <div className="ml-4 flex flex-col space-y-2">
-                  {canRespond ? (
-                    <>
-                      <Button 
-                        onClick={() => handleInspectionInterest(request.id, true)}
-                        disabled={submittingInterest === request.id}
-                        className="bg-green-600 hover:bg-green-700"
-                        size="sm"
-                      >
-                        {submittingInterest === request.id ? '처리중...' : '✅ 참여하기'}
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => handleInspectionInterest(request.id, false)}
-                        disabled={submittingInterest === request.id}
-                        size="sm"
-                      >
-                        ❌ 불참
-                      </Button>
-                    </>
-                  ) : (
-                    <Button variant="outline" size="sm" disabled>
-                      {request.inspection_interest ? '응답 완료' : '마감됨'}
-                    </Button>
-                  )}
+                  <Button 
+                    onClick={() => handleCancelParticipation(request.id)}
+                    disabled={submittingInterest === request.id}
+                    variant="outline" 
+                    className="border-red-300 text-red-600 hover:bg-red-50"
+                    size="sm"
+                  >
+                    {submittingInterest === request.id ? '처리중...' : '❌ 참여 취소'}
+                  </Button>
                   <Button variant="ghost" size="sm">
                     상세보기
                   </Button>

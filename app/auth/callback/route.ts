@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseReqResClient } from '@/lib/supabase'
+import { createMiddlewareClient } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const redirectTo = requestUrl.searchParams.get('redirectTo') || '/'
 
   if (code) {
-    const { supabase, response } = createSupabaseReqResClient(request)
+    const { supabase, response } = createMiddlewareClient(request)
     
     try {
       await supabase.auth.exchangeCodeForSession(code)

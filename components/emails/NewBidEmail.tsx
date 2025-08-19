@@ -5,22 +5,17 @@ import {
   Column,
   Text,
   Hr,
+  Button,
 } from '@react-email/components'
-import { BaseEmailTemplate, EmailButton, EmailBadge } from './BaseEmailTemplate'
+import { BaseEmailTemplate, EmailBadge } from './BaseEmailTemplate'
 
 interface NewBidEmailProps {
   customerName: string
   bid: {
     id: string
-    labor_cost: number
-    material_cost: number
-    permit_cost: number
-    disposal_cost: number
     total_amount: number
     timeline_weeks: number
-    start_date: string
-    included_items: string
-    excluded_items?: string
+    estimate_file_url?: string  // ✅ 견적서 파일 URL 추가
     notes?: string
     created_at: string
   }
@@ -132,7 +127,7 @@ export function NewBidEmail({ customerName, bid, contractor, request }: NewBidEm
           </Column>
           <Column>
             <Text style={valueText}>
-              📅 {new Date(bid.start_date).toLocaleDateString('en-CA', {
+              📅 {new Date(bid.created_at).toLocaleDateString('en-CA', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
@@ -157,55 +152,28 @@ export function NewBidEmail({ customerName, bid, contractor, request }: NewBidEm
         </Row>
       </Section>
 
-      {/* Cost Breakdown */}
+      {/* Cost Summary */}
       <Section style={cardSection}>
-        <Text style={cardTitle}>💰 Detailed Cost Breakdown</Text>
+        <Text style={cardTitle}>💰 견적 요약</Text>
         
         <Section style={costBreakdownSection}>
           <Row style={costRow}>
             <Column style={costLabelColumn}>
-              <Text style={costLabel}>Labor:</Text>
-            </Column>
-            <Column style={costValueColumn}>
-              <Text style={costValue}>{formatCurrency(bid.labor_cost)}</Text>
-            </Column>
-          </Row>
-
-          <Row style={costRow}>
-            <Column style={costLabelColumn}>
-              <Text style={costLabel}>Materials:</Text>
-            </Column>
-            <Column style={costValueColumn}>
-              <Text style={costValue}>{formatCurrency(bid.material_cost)}</Text>
-            </Column>
-          </Row>
-
-          <Row style={costRow}>
-            <Column style={costLabelColumn}>
-              <Text style={costLabel}>Permits & Fees:</Text>
-            </Column>
-            <Column style={costValueColumn}>
-              <Text style={costValue}>{formatCurrency(bid.permit_cost)}</Text>
-            </Column>
-          </Row>
-
-          <Row style={costRow}>
-            <Column style={costLabelColumn}>
-              <Text style={costLabel}>Disposal & Cleanup:</Text>
-            </Column>
-            <Column style={costValueColumn}>
-              <Text style={costValue}>{formatCurrency(bid.disposal_cost)}</Text>
-            </Column>
-          </Row>
-
-          <Hr style={costDivider} />
-
-          <Row style={totalRow}>
-            <Column style={costLabelColumn}>
-              <Text style={totalLabel}>Total Project Cost:</Text>
+              <Text style={costLabel}>총 견적 금액:</Text>
             </Column>
             <Column style={costValueColumn}>
               <Text style={totalValue}>{formatCurrency(bid.total_amount)}</Text>
+            </Column>
+          </Row>
+
+          <Row style={costRow}>
+            <Column style={costLabelColumn}>
+              <Text style={costLabel}>예상 공사 기간:</Text>
+            </Column>
+            <Column style={costValueColumn}>
+              <Text style={costValue}>
+                {bid.timeline_weeks} {bid.timeline_weeks === 1 ? '주' : '주'}
+              </Text>
             </Column>
           </Row>
         </Section>
@@ -214,28 +182,30 @@ export function NewBidEmail({ customerName, bid, contractor, request }: NewBidEm
       {/* Project Scope */}
       <Section style={cardSection}>
         <Text style={cardTitle}>📋 What&apos;s Included</Text>
-        <Text style={scopeText}>{bid.included_items}</Text>
-
-        {bid.excluded_items && (
-          <>
-            <Text style={cardTitle}>❌ What&apos;s Not Included</Text>
-            <Text style={scopeText}>{bid.excluded_items}</Text>
-          </>
-        )}
-
-        {bid.notes && (
-          <>
-            <Text style={cardTitle}>📝 Additional Notes</Text>
-            <Text style={scopeText}>{bid.notes}</Text>
-          </>
-        )}
+        <Text style={scopeText}>{bid.notes || 'Detailed information available in the estimate file'}</Text>
       </Section>
+
+      {/* 견적서 다운로드 섹션 */}
+      {bid.estimate_file_url && (
+        <Section style={cardSection}>
+          <Text style={cardTitle}>📄 견적서 다운로드</Text>
+          <Text style={scopeText}>
+            상세한 견적 내역과 작업 범위를 확인하려면 견적서를 다운로드하세요.
+          </Text>
+          <Button 
+            href={`${baseUrl}/api/bids/${bid.id}/download-estimate`}
+            style={downloadButtonStyle}
+          >
+            📄 견적서 파일 다운로드
+          </Button>
+        </Section>
+      )}
 
       {/* Call to Action */}
       <Section style={ctaSection}>
-        <EmailButton href={compareUrl}>
+        <Button href={compareUrl} style={ctaButtonStyle}>
           Compare All Bids
-        </EmailButton>
+        </Button>
         
         <Text style={ctaSubtext}>
           Review all your bids in one place and make an informed decision
@@ -271,9 +241,9 @@ export function NewBidEmail({ customerName, bid, contractor, request }: NewBidEm
         <Text style={secondaryCtaText}>
           Want to see your project details?
         </Text>
-        <EmailButton href={requestUrl} variant="secondary">
+        <Button href={requestUrl} style={secondaryCtaButtonStyle}>
           View Project Page
-        </EmailButton>
+        </Button>
       </Section>
     </BaseEmailTemplate>
   )
@@ -395,22 +365,6 @@ const costValue = {
   margin: '0',
 }
 
-const costDivider = {
-  borderColor: '#e5e7eb',
-  margin: '12px 0',
-}
-
-const totalRow = {
-  margin: '0',
-}
-
-const totalLabel = {
-  fontSize: '16px',
-  color: '#111827',
-  fontWeight: 'bold',
-  margin: '0',
-}
-
 const totalValue = {
   fontSize: '18px',
   color: '#059669',
@@ -463,4 +417,40 @@ const listItem = {
   color: '#374151',
   margin: '0 0 8px 0',
   lineHeight: '22px',
+}
+
+const downloadButtonStyle = {
+  marginTop: '16px',
+  padding: '12px 24px',
+  backgroundColor: '#dc2626',
+  color: '#ffffff',
+  borderRadius: '8px',
+  fontSize: '16px',
+  fontWeight: 'bold',
+  textDecoration: 'none',
+  display: 'inline-block',
+}
+
+const ctaButtonStyle = {
+  marginTop: '16px',
+  padding: '12px 24px',
+  backgroundColor: '#4f46e5',
+  color: '#ffffff',
+  borderRadius: '8px',
+  fontSize: '16px',
+  fontWeight: 'bold',
+  textDecoration: 'none',
+  display: 'inline-block',
+}
+
+const secondaryCtaButtonStyle = {
+  marginTop: '16px',
+  padding: '12px 24px',
+  backgroundColor: '#4f46e5',
+  color: '#ffffff',
+  borderRadius: '8px',
+  fontSize: '16px',
+  fontWeight: 'bold',
+  textDecoration: 'none',
+  display: 'inline-block',
 }

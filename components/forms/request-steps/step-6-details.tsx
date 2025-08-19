@@ -24,10 +24,10 @@ export function DetailsStep({ description, photos, onUpdate }: DetailsStepProps)
 
   const validateFile = (file: File): string | null => {
     if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
-      return 'Please upload only JPEG, PNG, or WebP images'
+      return 'JPEG, PNG 또는 WebP 이미지만 업로드해주세요'
     }
     if (file.size > MAX_FILE_SIZE) {
-      return 'File size must be less than 10MB'
+      return '파일 크기는 10MB 미만이어야 합니다'
     }
     return null
   }
@@ -99,9 +99,15 @@ export function DetailsStep({ description, photos, onUpdate }: DetailsStepProps)
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Tell us about your project
+          프로젝트에 대해 알려주세요
         </h2>
-        <p className="text-gray-600">
+        <p className="text-lg text-gray-600">
+          Tell us about your project
+        </p>
+        <p className="text-sm text-gray-500 mt-2">
+          상세 정보와 사진을 제공하여 업체들이 귀하의 비전을 이해할 수 있도록 도와주세요
+        </p>
+        <p className="text-xs text-gray-500">
           Provide details and photos to help contractors understand your vision
         </p>
       </div>
@@ -111,11 +117,14 @@ export function DetailsStep({ description, photos, onUpdate }: DetailsStepProps)
         <CardContent className="p-6 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="description" className="text-base font-medium">
-              Project Description *
+              프로젝트 설명 *
             </Label>
+            <p className="text-xs text-gray-500">
+              Project Description *
+            </p>
             <Textarea
               id="description"
-              placeholder="Describe your renovation project in detail. Include what you want to achieve, any specific requirements, preferred materials, timeline constraints, or special considerations..."
+              placeholder="리노베이션 프로젝트를 상세히 설명해주세요. 달성하고 싶은 목표, 특정 요구사항, 선호하는 재료, 일정 제약, 또는 특별한 고려사항을 포함해주세요..."
               value={description}
               onChange={(e) => onUpdate({ description: e.target.value, photos })}
               rows={6}
@@ -123,20 +132,20 @@ export function DetailsStep({ description, photos, onUpdate }: DetailsStepProps)
             />
             <div className="flex items-center justify-between text-sm">
               <span className={description.length < 10 ? 'text-red-600' : 'text-green-600'}>
-                {description.length}/10 characters minimum
+                {description.length}/10자 최소
               </span>
               {isDescriptionValid && (
                 <span className="text-green-600 flex items-center">
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Good description
+                  좋은 설명입니다
                 </span>
               )}
             </div>
             {!isDescriptionValid && description.length > 0 && (
               <p className="text-sm text-red-600">
-                Please provide more details to help contractors understand your project
+                업체들이 프로젝트를 이해할 수 있도록 더 자세한 정보를 제공해주세요
               </p>
             )}
           </div>
@@ -148,9 +157,15 @@ export function DetailsStep({ description, photos, onUpdate }: DetailsStepProps)
         <CardContent className="p-6 space-y-4">
           <div className="space-y-2">
             <Label className="text-base font-medium">
-              Project Photos (Optional)
+              프로젝트 사진 (선택사항)
             </Label>
+            <p className="text-xs text-gray-500">
+              Project Photos (Optional)
+            </p>
             <p className="text-sm text-gray-600">
+              최대 {MAX_PHOTOS}장의 사진을 업로드하여 현재 상태나 영감을 보여주세요
+            </p>
+            <p className="text-xs text-gray-500">
               Upload up to {MAX_PHOTOS} photos to show the current state or your inspiration
             </p>
           </div>
@@ -176,9 +191,12 @@ export function DetailsStep({ description, photos, onUpdate }: DetailsStepProps)
               </div>
               <div>
                 <p className="text-lg font-medium text-gray-900">
-                  {photos.length >= MAX_PHOTOS ? 'Maximum photos uploaded' : 'Drop photos here or click to upload'}
+                  {photos.length >= MAX_PHOTOS ? '최대 사진 업로드 완료' : 'Drop photos here or click to upload'}
                 </p>
                 <p className="text-sm text-gray-600">
+                  JPEG, PNG 또는 WebP, 각각 최대 10MB
+                </p>
+                <p className="text-xs text-gray-500">
                   JPEG, PNG, or WebP up to 10MB each
                 </p>
               </div>
@@ -203,7 +221,8 @@ export function DetailsStep({ description, photos, onUpdate }: DetailsStepProps)
           {/* Photo Preview */}
           {photos.length > 0 && (
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-900">Uploaded Photos ({photos.length}/{MAX_PHOTOS})</h4>
+              <h4 className="font-medium text-gray-900">업로드된 사진 ({photos.length}/{MAX_PHOTOS})</h4>
+              <p className="text-xs text-gray-500">Uploaded Photos ({photos.length}/{MAX_PHOTOS})</p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {photos.map((photo, index) => (
                   <div key={index} className="relative group">
@@ -242,8 +261,14 @@ export function DetailsStep({ description, photos, onUpdate }: DetailsStepProps)
             </svg>
           </div>
           <div>
-            <h4 className="font-medium text-blue-800 mb-1">Helpful Tips</h4>
-            <ul className="text-sm text-blue-700 space-y-1">
+            <h4 className="font-medium text-blue-800 mb-1">도움말 / Helpful Tips</h4>
+            <ul className="text-sm text-blue-700 space-y-1 mb-2">
+              <li>• 다양한 각도에서 현재 공간의 사진을 포함하세요</li>
+              <li>• 주의가 필요한 문제 영역을 보여주세요</li>
+              <li>• 특정 비전이 있다면 영감을 주는 사진을 추가하세요</li>
+              <li>• 더 자세한 정보를 제공할수록 더 정확한 견적을 받을 수 있습니다</li>
+            </ul>
+            <ul className="text-xs text-blue-600 italic space-y-1">
               <li>• Include photos of the current space from different angles</li>
               <li>• Show any problem areas that need attention</li>
               <li>• Add inspiration photos if you have a specific vision</li>

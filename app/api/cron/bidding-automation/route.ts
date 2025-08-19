@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { headers } from 'next/headers';
+import { emailService } from '@/lib/email-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,7 +59,30 @@ export async function GET(request: NextRequest) {
         }
       });
 
-      // TODO: Send bidding open notification emails
+      // Send bidding open notification emails
+      for (const contractor of interestedContractors) {
+        try {
+          await emailService.sendBiddingStartedEmail(
+            contractor.contractor.user.email,
+            contractor.contractor.user.name,
+            contractor.contractor.business_name || '개인업체',
+            {
+              id: request.id,
+              category: request.category,
+              property_type: request.property_type,
+              budget_range: request.budget_range,
+              address: request.address,
+              description: request.description,
+              bidding_end_date: new Date(now.getTime() + sevenDaysInMs),
+              customer: { name: '고객' } // 실제로는 customer 정보를 가져와야 함
+            }
+          )
+          console.log(`[CRON] Bidding started email sent to ${contractor.contractor.user.email}`)
+        } catch (error) {
+          console.error(`[CRON] Failed to send bidding started email to ${contractor.contractor.user.email}:`, error)
+        }
+      }
+      
       console.log(`[CRON] Bidding opened for request ${request.id}, notifying ${interestedContractors.length} contractors`);
       console.log(`[CRON] Bidding will close at: ${new Date(now.getTime() + sevenDaysInMs).toISOString()}`);
     }
@@ -96,7 +120,41 @@ export async function GET(request: NextRequest) {
         }
       });
 
-      // TODO: Send notification to customer to select a contractor
+      // Send notification to customer to select a contractor
+      try {
+        await emailService.sendBiddingClosedEmail(
+          request.customer.email,
+          request.customer.name,
+          {
+            id: request.id,
+            category: request.category,
+            property_type: request.property_type,
+            budget_range: request.budget_range,
+            address: request.address,
+            description: request.description,
+            bidding_start_date: request.bidding_start_date,
+            bidding_end_date: request.bidding_end_date
+          },
+          request.bids.map(bid => ({
+            id: bid.id,
+            contractor: {
+              business_name: bid.contractor.business_name || '개인업체',
+              user: {
+                name: '업체명',
+                email: 'email@example.com'
+              }
+            },
+            total_amount: bid.total_amount,
+            timeline_weeks: bid.timeline_weeks,
+            included_items: bid.included_items || '',
+            notes: bid.notes || ''
+          }))
+        )
+        console.log(`[CRON] Bidding closed email sent to customer ${request.customer.email}`)
+      } catch (error) {
+        console.error(`[CRON] Failed to send bidding closed email to customer:`, error)
+      }
+      
       console.log(`[CRON] Bidding closed for request ${request.id}, ${request.bids.length} bids received after ${biddingDuration} days`);
     }
 
