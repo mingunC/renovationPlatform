@@ -93,8 +93,14 @@ export function RequestList() {
           variant: !currentParticipation ? "default" : "destructive"
         })
         
-        // 목록 새로고침
-        await fetchRequests()
+        // 로컬 상태만 업데이트하여 불필요한 API 호출 방지
+        setRequests(prevRequests => 
+          prevRequests.map(request => 
+            request.id === requestId 
+              ? { ...request, hasInterest: !currentParticipation }
+              : request
+          )
+        )
       } else {
         const errorData = await response.json()
         toast({

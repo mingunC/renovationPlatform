@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import { createClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { getSupabaseBrowser } from '@/lib/supabase-browser';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface UserProfile {
   id: string;
@@ -17,15 +18,47 @@ interface UserProfile {
 }
 
 export function Header() {
-  const [user, setUser] = useState<any>(null); // Supabase user
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null); // Database profile
-  const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false); // Hydration 방지용
-  const processingAuth = useRef(false);
   const router = useRouter();
+  const queryClient = useQueryClient();
   
   // Create Supabase client instance
-  const supabase = createClient();
+  const supabase = getSupabaseBrowser();
+
+  // 클라이언트에서만 렌더링되도록 보장
+  const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const processingAuth = useRef(false);
+
+  // React Query를 사용한 profile API 호출
+  const { data: userProfile, refetch: refetchProfile } = useQuery({
+    queryKey: ['user-profile'],
+    queryFn: async (): Promise<{ user: UserProfile }> => {
+      if (!user?.id) throw new Error('No user ID');
+      
+      const response = await fetch('/api/auth/profile', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
+        body: JSON.stringify({
+          id: user.id,
+          email: user.email,
+          name: user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user profile');
+      }
+
+      return response.json();
+    },
+    enabled: !!user?.id, // user가 있을 때만 실행
+    staleTime: 10 * 60 * 1000, // 10분
+    gcTime: 15 * 60 * 1000, // 15분 (cacheTime 대신 gcTime 사용)
+  });
 
   // 클라이언트에서만 렌더링되도록 보장
   useEffect(() => {
@@ -46,7 +79,6 @@ export function Header() {
 
       if (!session?.user?.id) {
         setUser(null);
-        setUserProfile(null);
         setLoading(false);
         return;
       }
@@ -54,72 +86,13 @@ export function Header() {
       processingAuth.current = true;
       
       try {
-        const userId = session.user.id;
-        const userEmail = session.user.email;
-        const userName = session.user.user_metadata?.name || 
-                        session.user.user_metadata?.full_name ||
-                        userEmail?.split('@')[0] || 
-                        'Unknown';
-
-        console.log('📝 Processing user profile:', { userId, userEmail, userName });
-
-        // 사용자 프로필 생성/업데이트
-        const response = await fetch('/api/auth/profile', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache'
-          },
-          body: JSON.stringify({
-            id: userId,
-            email: userEmail,
-            name: userName
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('✅ User profile processed successfully:', data.user);
-          setUser(session.user); // Supabase user
-          setUserProfile(data.user); // Database profile
-        } else {
-          const errorData = await response.json();
-          console.error('❌ Profile processing failed:', {
-            status: response.status,
-            statusText: response.statusText,
-            errorData,
-            requestData: { userId, userEmail, userName }
-          });
-          
-          // UUID 형식 에러인 경우 특별 처리
-          if (errorData.error?.includes('UUID')) {
-            console.error('🔍 UUID format issue detected:', userId);
-          }
-          
-          // 실패해도 기본 사용자 정보는 설정
-          setUser(session.user);
-          setUserProfile({
-            id: userId,
-            email: userEmail,
-            name: userName,
-            type: 'CONTRACTOR' // 기본값을 CONTRACTOR로 변경
-          });
-        }
-
+        setUser(session.user);
+        setLoading(false);
       } catch (error) {
         console.error('❌ Auth processing error:', error);
-        
-        // 에러 발생해도 기본 사용자 정보는 설정
-        setUser(session.user);
-        setUserProfile({
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.user_metadata?.name || 'Unknown',
-          type: 'CONTRACTOR'
-        });
+        setLoading(false);
       } finally {
         processingAuth.current = false;
-        setLoading(false);
       }
     };
 
@@ -134,7 +107,7 @@ export function Header() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [mounted]);
+  }, []); // 의존성 배열을 빈 배열로 변경하여 마운트 시 한 번만 실행
 
   // 로그아웃 처리
   const handleLogout = async () => {
@@ -142,7 +115,6 @@ export function Header() {
       setLoading(true);
       await supabase.auth.signOut();
       setUser(null);
-      setUserProfile(null);
       router.push('/');
       console.log('👋 User logged out successfully');
     } catch (error) {
@@ -157,20 +129,20 @@ export function Header() {
     return (
       <header className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4">
-                  <div className="flex items-center justify-between h-16">
-          {/* 왼쪽: 로고 */}
-          <div className="flex items-center">
-            <a href="/" className="text-xl font-bold text-blue-600">
-              리노베이트 플랫폼
-            </a>
-          </div>
-          
-          {/* 중앙: 네비게이션 메뉴 (로딩 중에는 숨김) */}
-          <nav className="flex-1 flex justify-center">
-            <div className="flex items-center space-x-6">
-              {/* 로딩 중에는 메뉴 숨김 */}
+          <div className="flex items-center justify-between h-16">
+            {/* 왼쪽: 로고 */}
+            <div className="flex items-center">
+              <a href="/" className="text-xl font-bold text-blue-600">
+                리노베이트 플랫폼
+              </a>
             </div>
-          </nav>
+            
+            {/* 중앙: 네비게이션 메뉴 (로딩 중에는 숨김) */}
+            <nav className="flex-1 flex justify-center">
+              <div className="flex items-center space-x-6">
+                {/* 로딩 중에는 메뉴 숨김 */}
+              </div>
+            </nav>
             <div className="flex items-center space-x-4">
               <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
             </div>
@@ -194,7 +166,7 @@ export function Header() {
           {/* 중앙: 네비게이션 메뉴 */}
           <nav className="flex-1 flex justify-center">
             <div className="flex items-center space-x-6">
-              {userProfile?.type === 'CONTRACTOR' && (
+              {userProfile?.user?.type === 'CONTRACTOR' && (
                 <>
                   <a href="/dashboard" className="text-gray-600 hover:text-blue-600">
                     🏗️ 대시보드
@@ -207,61 +179,64 @@ export function Header() {
                   </a>
                 </>
               )}
-              {userProfile?.type === 'CUSTOMER' && (
+              
+              {userProfile?.user?.type === 'CUSTOMER' && (
                 <>
                   <a href="/my-projects" className="text-gray-600 hover:text-blue-600">
-                    내 프로젝트
+                    📋 내 프로젝트
                   </a>
-                  <a href="/compare" className="text-gray-600 hover:text-blue-600">
-                    견적 비교
+                  <a href="/request" className="text-gray-600 hover:text-blue-600">
+                    🚀 새 프로젝트 요청
+                  </a>
+                </>
+              )}
+              
+              {userProfile?.user?.type === 'ADMIN' && (
+                <>
+                  <a href="/admin" className="text-gray-600 hover:text-blue-600">
+                    ⚙️ 관리자 패널
                   </a>
                 </>
               )}
             </div>
           </nav>
           
+          {/* 오른쪽: 사용자 메뉴 */}
           <div className="flex items-center space-x-4">
             {loading ? (
               <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
             ) : user ? (
               <div className="flex items-center space-x-3">
-                <div className="flex flex-col items-end">
-                  <span className="text-gray-700 font-medium">
-                    {userProfile?.name || user.email?.split('@')[0] || 'User'}
+                <div className="text-sm text-gray-700">
+                  <span className="font-medium">
+                    {userProfile?.user?.name || user.user_metadata?.name || user.email?.split('@')[0]}
                   </span>
-                  <span className="text-xs text-gray-500">
-                    {userProfile?.type === 'CONTRACTOR' ? 
-                      `🏗️ ${userProfile.contractor?.business_name || 'Contractor'}` : 
-                     userProfile?.type === 'CUSTOMER' ? '👤 Customer' : 
-                     userProfile?.type === 'ADMIN' ? '⚡ Admin' : 'User'}
-                  </span>
+                  {userProfile?.user?.contractor && (
+                    <span className="ml-2 text-gray-500">
+                      ({userProfile.user.contractor.business_name})
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="text-gray-600 hover:text-red-600 transition-colors"
+                  className="px-3 py-1 text-sm text-gray-600 hover:text-red-600 transition-colors"
                 >
                   로그아웃
                 </button>
               </div>
             ) : (
               <div className="flex items-center space-x-3">
-                <a 
-                  href="/login" 
-                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                <a
+                  href="/login"
+                  className="px-4 py-2 text-sm text-blue-600 hover:text-blue-700 transition-colors"
                 >
-                  👤 고객 로그인
+                  로그인
                 </a>
-                <a 
-                  href="/register" 
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                <a
+                  href="/register"
+                  className="px-4 py-2 text-sm bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
                 >
-                  📝 회원가입
-                </a>
-                <a 
-                  href="/contractor-login" 
-                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-                >
-                  🏗️ 업체 로그인
+                  회원가입
                 </a>
               </div>
             )}

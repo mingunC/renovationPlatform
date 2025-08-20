@@ -118,7 +118,7 @@ export function InspectionScheduledList() {
 
       if (response.ok) {
         // 성공적으로 취소된 경우
-        const successMessage = '❌ 현장 방문 참여가 취소되었습니다. 프로젝트가 새 요청 탭으로 이동됩니다.'
+        let successMessage = '❌ 현장 방문 참여가 취소되었습니다. 프로젝트가 새 요청 탭으로 이동됩니다.'
         
         // 성공 알림 표시
         const notification = document.createElement('div')
@@ -134,7 +134,10 @@ export function InspectionScheduledList() {
           }, 300)
         }, 3000)
         
-        await fetchInspectionRequests() // 목록 새로고침
+        // 로컬 상태만 업데이트하여 불필요한 API 호출 방지
+        setRequests(prevRequests => 
+          prevRequests.filter(request => request.id !== requestId)
+        )
       } else {
         const errorData = await response.json()
         console.error('Error canceling participation:', errorData)

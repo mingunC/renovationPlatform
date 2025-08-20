@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Header } from '@/components/layout/header'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -82,6 +84,18 @@ export const viewport: Viewport = {
   themeColor: '#2563eb',
 }
 
+// React Query 클라이언트 생성
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5분
+      cacheTime: 10 * 60 * 1000, // 10분
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+})
+
 export default function RootLayout({
   children,
 }: {
@@ -98,10 +112,13 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Renovate Platform" />
       </head>
       <body className={`${inter.className} antialiased min-h-screen bg-white`}>
-        <Header />
-        <main className="min-h-screen">
-          {children}
-        </main>
+        <QueryClientProvider client={queryClient}>
+          <Header />
+          <main className="min-h-screen">
+            {children}
+            <ReactQueryDevtools initialIsOpen={false} />
+          </main>
+        </QueryClientProvider>
       </body>
     </html>
   )
