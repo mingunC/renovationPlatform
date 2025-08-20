@@ -280,7 +280,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      inspection_interests: interests || []
+      data: interests || []
     });
 
   } catch (error) {
