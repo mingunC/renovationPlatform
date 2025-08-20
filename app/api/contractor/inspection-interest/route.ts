@@ -188,9 +188,13 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  console.log('🚀 GET /api/contractor/inspection-interest called');
+  
   try {
     // Supabase 클라이언트 생성
     const cookieStore = await cookies();
+    console.log('🍪 Cookie store created, cookies count:', cookieStore.getAll().length);
+    
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -214,14 +218,36 @@ export async function GET(request: NextRequest) {
       }
     );
 
+    console.log('✅ Supabase client created');
+
     // 사용자 인증 확인
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+    let user: any = null;
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    console.log('🔐 Auth result:', { user: authUser?.id, error: authError?.message });
+    
+    if (authError || !authUser) {
+      console.error('❌ Authentication error:', authError);
+      console.log('🔍 Trying to get session instead...');
+      
+      // 세션으로 재시도
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('🔐 Session result:', { session: session?.user?.id, error: sessionError?.message });
+      
+      if (sessionError || !session?.user) {
+        console.error('❌ Session also failed:', sessionError);
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+      
+      console.log('✅ User authenticated via session:', session.user.id);
+      user = session.user;
+    } else {
+      user = authUser;
     }
+
+    console.log('✅ User authenticated:', user.id);
 
     // 업체 프로필 확인
     const { data: contractor, error: contractorError } = await supabase
@@ -231,11 +257,14 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (contractorError || !contractor) {
+      console.error('❌ Contractor profile error:', contractorError);
       return NextResponse.json(
         { error: 'Contractor profile not found' },
         { status: 404 }
       );
     }
+
+    console.log('✅ Contractor profile found:', contractor.id);
 
     // 쿼리 파라미터 파싱
     const { searchParams } = new URL(request.url);
