@@ -87,9 +87,15 @@ export async function GET(request: NextRequest) {
         inspection_interests(
           id,
           will_participate,
+          created_at,
           contractor:contractors(
             id,
-            business_name
+            business_name,
+            user:users!contractors_user_id_fkey(
+              id,
+              name,
+              email
+            )
           )
         )
       `);

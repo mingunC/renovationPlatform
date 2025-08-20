@@ -42,15 +42,18 @@ interface InspectionRequest {
   inspection_time?: string
   notes?: string
   inspection_interests: Array<{
+    id: string
+    will_participate: boolean
+    created_at: string
     contractor: {
+      id: string
+      business_name: string
       user: {
+        id: string
         name: string
         email: string
       }
-      company_name: string
     }
-    will_participate: boolean
-    created_at: string
   }>
 }
 
@@ -120,6 +123,7 @@ export default function InspectionSchedulePage() {
       if (response.ok) {
         const data = await response.json()
         console.log('Inspection requests data:', data)
+        console.log('First request inspection_interests:', data.requests?.[0]?.inspection_interests)
         setRequests(data.requests || [])
       } else {
         console.error('Failed to fetch inspection requests:', response.status)
@@ -472,7 +476,7 @@ export default function InspectionSchedulePage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           {request.inspection_interests.map((interest, index) => (
                             <div key={index} className="text-xs text-gray-600">
-                              <span className="font-medium">{interest.contractor?.company_name || 'Unknown'}</span>
+                              <span className="font-medium">{interest.contractor?.business_name || 'Unknown'}</span>
                               <span className="ml-2">({interest.contractor?.user?.name || 'Unknown'})</span>
                               {interest.will_participate && (
                                 <Badge variant="outline" className="ml-2 text-xs">참여 확정</Badge>
@@ -600,7 +604,7 @@ export default function InspectionSchedulePage() {
                   <div className="bg-gray-50 p-3 rounded-lg space-y-2">
                     {selectedRequest.inspection_interests.map((interest, index) => (
                       <div key={index} className="border-b border-gray-200 pb-2 last:border-b-0">
-                        <p className="text-sm font-medium text-gray-900">{interest.contractor?.company_name || 'Unknown'}</p>
+                        <p className="text-sm font-medium text-gray-900">{interest.contractor?.business_name || 'Unknown'}</p>
                         <p className="text-xs text-gray-600">담당자: {interest.contractor?.user?.name || 'Unknown'}</p>
                         <p className="text-xs text-gray-600">이메일: {interest.contractor?.user?.email || 'Unknown'}</p>
                         <p className="text-xs text-gray-600">참여 확정: {interest.will_participate ? '예' : '아니오'}</p>
