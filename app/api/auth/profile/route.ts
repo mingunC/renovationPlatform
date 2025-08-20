@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 
 // GET: 사용자 프로필 조회
 export async function GET(request: NextRequest) {
+  console.log('🚀 GET /api/auth/profile called');
+  
   try {
+    // Supabase 클라이언트 생성
+    const supabase = await createClient();
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const email = searchParams.get('email');
@@ -14,42 +18,6 @@ export async function GET(request: NextRequest) {
         error: 'ID or email is required' 
       }, { status: 400 });
     }
-
-    // Supabase 클라이언트 생성
-    let cookieStore;
-    try {
-      cookieStore = await cookies();
-    } catch (error: any) {
-      console.error('❌ Cookie initialization error:', error);
-      return Response.json({
-        error: 'Cookie initialization failed',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        errorType: process.env.NODE_ENV === 'development' ? error.constructor.name : undefined
-      }, { status: 500 });
-    }
-    
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
-            }
-          },
-        },
-      }
-    );
 
     let user;
     
@@ -115,40 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Supabase 클라이언트 생성
-    let cookieStore;
-    try {
-      cookieStore = await cookies();
-    } catch (error: any) {
-      console.error('❌ Cookie initialization error:', error);
-      return Response.json({
-        error: 'Cookie initialization failed',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        errorType: process.env.NODE_ENV === 'development' ? error.constructor.name : undefined
-      }, { status: 500 });
-    }
-    
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
-            }
-          },
-        },
-      }
-    );
+    const supabase = await createClient();
 
     console.log('✅ Supabase client created');
 
@@ -277,39 +212,7 @@ export async function PUT(request: NextRequest) {
     console.log('=== PUT /api/auth/profile (Upsert) ===')
     
     // Supabase 클라이언트 생성
-    let cookieStore;
-    try {
-      cookieStore = await cookies();
-    } catch (error: any) {
-      console.error('❌ Cookie initialization error:', error);
-      return NextResponse.json(
-        { error: 'Cookie initialization failed', details: process.env.NODE_ENV === 'development' ? error.message : undefined },
-        { status: 500 }
-      );
-    }
-    
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
-            }
-          },
-        },
-      }
-    );
+    const supabase = await createClient();
     
     const body = await request.json()
     console.log('Upsert request body:', body)

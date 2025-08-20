@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -119,16 +119,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 이메일 중복 확인
-    const existingUser = await prisma.user.findFirst({
-      where: { email }
-    })
+    const existingUser = await supabase.from('users').select('*').eq('email', email).single();
 
-    if (existingUser) {
+    if (existingUser.data) {
       return NextResponse.json(
         { 
           error: `이미 등록된 이메일입니다: ${email}`,
           details: '이 이메일로 가입한 사용자가 이미 존재합니다. 다른 이메일을 사용하거나 기존 사용자 정보를 확인해주세요.',
-          existingUserType: existingUser.type
+          existingUserType: existingUser.data.type
         },
         { status: 409 }
       )
@@ -196,22 +194,20 @@ export async function POST(request: NextRequest) {
     console.log('Supabase user created:', { id: supabaseUser.user.id, email: supabaseUser.user.email })
     
     // Prisma에 사용자 생성 (Supabase ID 사용)
-    const newUser = await prisma.user.create({
-      data: {
-        id: supabaseUser.user.id, // Supabase에서 생성된 ID 사용
-        email,
-        name,
-        phone,
-        type: 'CONTRACTOR',
-        created_at: new Date(),
-        updated_at: new Date()
-      }
-    })
+    const newUser = await supabase.from('users').insert({
+      id: supabaseUser.user.id, // Supabase에서 생성된 ID 사용
+      email,
+      name,
+      phone,
+      type: 'CONTRACTOR',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }).select().single();
     
-    console.log('User created successfully:', { id: newUser.id, email: newUser.email })
+    console.log('User created successfully:', { id: newUser.data.id, email: newUser.data.email })
 
     console.log('Creating contractor profile with data:', { 
-      user_id: newUser.id, 
+      user_id: newUser.data.id, 
       business_name, 
       service_areas, 
       categories 
@@ -221,7 +217,7 @@ export async function POST(request: NextRequest) {
     const { data: contractor, error: contractorError } = await supabase
       .from('contractors')
       .insert({
-        user_id: newUser.id,
+        user_id: newUser.data.id,
         business_name: business_name || null,
         business_number: business_number || null,
         phone,
@@ -251,10 +247,10 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Contractor added successfully',
       user: {
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name,
-        type: newUser.type
+        id: newUser.data.id,
+        email: newUser.data.email,
+        name: newUser.data.name,
+        type: newUser.data.type
       },
       contractor: {
         id: contractor.id,
@@ -287,39 +283,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Supabase 클라이언트 생성
-    let cookieStore;
-    try {
-      cookieStore = await cookies();
-    } catch (error: any) {
-      console.error('❌ Cookie initialization error:', error);
-      return NextResponse.json(
-        { error: 'Cookie initialization failed' },
-        { status: 500 }
-      );
-    }
-    
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
-            }
-          },
-        },
-      }
-    );
+    const supabase = await createClient();
     
     // 세션 확인
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
