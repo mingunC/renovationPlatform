@@ -15,7 +15,17 @@ export async function POST(request: NextRequest) {
     console.log('SUPABASE_SERVICE_ROLE_KEY preview:', process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20) + '...')
     
     // Supabase 클라이언트 생성
-    const cookieStore = await cookies();
+    let cookieStore;
+    try {
+      cookieStore = await cookies();
+    } catch (error: any) {
+      console.error('❌ Cookie initialization error:', error);
+      return NextResponse.json(
+        { error: 'Cookie initialization failed' },
+        { status: 500 }
+      );
+    }
+    
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -277,7 +287,17 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Supabase 클라이언트 생성
-    const cookieStore = await cookies();
+    let cookieStore;
+    try {
+      cookieStore = await cookies();
+    } catch (error: any) {
+      console.error('❌ Cookie initialization error:', error);
+      return NextResponse.json(
+        { error: 'Cookie initialization failed' },
+        { status: 500 }
+      );
+    }
+    
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

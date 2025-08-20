@@ -16,7 +16,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Supabase 클라이언트 생성
-    const cookieStore = await cookies();
+    let cookieStore;
+    try {
+      cookieStore = await cookies();
+    } catch (error: any) {
+      console.error('❌ Cookie initialization error:', error);
+      return Response.json({
+        error: 'Cookie initialization failed',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        errorType: process.env.NODE_ENV === 'development' ? error.constructor.name : undefined
+      }, { status: 500 });
+    }
+    
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -104,7 +115,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Supabase 클라이언트 생성
-    const cookieStore = await cookies();
+    let cookieStore;
+    try {
+      cookieStore = await cookies();
+    } catch (error: any) {
+      console.error('❌ Cookie initialization error:', error);
+      return Response.json({
+        error: 'Cookie initialization failed',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        errorType: process.env.NODE_ENV === 'development' ? error.constructor.name : undefined
+      }, { status: 500 });
+    }
+    
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -255,7 +277,17 @@ export async function PUT(request: NextRequest) {
     console.log('=== PUT /api/auth/profile (Upsert) ===')
     
     // Supabase 클라이언트 생성
-    const cookieStore = await cookies();
+    let cookieStore;
+    try {
+      cookieStore = await cookies();
+    } catch (error: any) {
+      console.error('❌ Cookie initialization error:', error);
+      return NextResponse.json(
+        { error: 'Cookie initialization failed', details: process.env.NODE_ENV === 'development' ? error.message : undefined },
+        { status: 500 }
+      );
+    }
+    
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
