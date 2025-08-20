@@ -1,23 +1,20 @@
 // app/api/contractor/inspection-interest/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createSupabaseClient, getAuthenticatedUser, createAuthErrorResponse, createNotFoundResponse } from '@/utils/supabase/api';
 
 export async function POST(request: NextRequest) {
   console.log('🚀 POST /api/contractor/inspection-interest called');
   
   try {
     // Supabase 클라이언트 생성
-    const supabase = await createClient();
+    const supabase = await createSupabaseClient();
     console.log('✅ Supabase client created');
 
     // 사용자 인증 확인
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.error('❌ Authentication error:', authError);
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+    const user = await getAuthenticatedUser(supabase);
+    if (!user) {
+      console.error('❌ Authentication failed');
+      return createAuthErrorResponse();
     }
 
     console.log('✅ User authenticated:', user.id);
@@ -31,10 +28,7 @@ export async function POST(request: NextRequest) {
 
     if (contractorError || !contractor) {
       console.error('❌ Contractor profile error:', contractorError);
-      return NextResponse.json(
-        { error: 'Contractor profile not found' },
-        { status: 404 }
-      );
+      return createNotFoundResponse('Contractor profile not found');
     }
 
     console.log('✅ Contractor profile found:', contractor.id);
@@ -63,10 +57,7 @@ export async function POST(request: NextRequest) {
 
     if (requestError || !renovationRequest) {
       console.error('❌ Project request error:', requestError);
-      return NextResponse.json(
-        { error: 'Project request not found' },
-        { status: 404 }
-      );
+      return createNotFoundResponse('Project request not found');
     }
 
     console.log('✅ Project request found, status:', renovationRequest.status);
@@ -168,7 +159,7 @@ export async function GET(request: NextRequest) {
   
   try {
     // Supabase 클라이언트 생성
-    const supabase = await createClient();
+    const supabase = await createSupabaseClient();
     console.log('✅ Supabase client created');
 
     // 사용자 인증 확인
@@ -209,10 +200,7 @@ export async function GET(request: NextRequest) {
 
     if (contractorError || !contractor) {
       console.error('❌ Contractor profile error:', contractorError);
-      return NextResponse.json(
-        { error: 'Contractor profile not found' },
-        { status: 404 }
-      );
+      return createNotFoundResponse('Contractor profile not found');
     }
 
     console.log('✅ Contractor profile found:', contractor.id);

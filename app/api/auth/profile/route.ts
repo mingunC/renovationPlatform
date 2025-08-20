@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createSupabaseClient, createErrorResponse } from '@/utils/supabase/api';
 
 // GET: 사용자 프로필 조회
 export async function GET(request: NextRequest) {
@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   
   try {
     // Supabase 클라이언트 생성
-    const supabase = await createClient();
+    const supabase = await createSupabaseClient();
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Supabase 클라이언트 생성
-    const supabase = await createClient();
+    const supabase = await createSupabaseClient();
 
     console.log('✅ Supabase client created');
 
@@ -212,7 +212,7 @@ export async function PUT(request: NextRequest) {
     console.log('=== PUT /api/auth/profile (Upsert) ===')
     
     // Supabase 클라이언트 생성
-    const supabase = await createClient();
+    const supabase = await createSupabaseClient();
     
     const body = await request.json()
     console.log('Upsert request body:', body)

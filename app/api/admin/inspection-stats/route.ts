@@ -1,22 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createSupabaseClient, createAuthErrorResponse, createForbiddenResponse } from '@/utils/supabase/api';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('=== GET /api/admin/inspection-stats called ===');
     
     // Supabase 클라이언트 생성
-    const supabase = await createClient();
+    const supabase = await createSupabaseClient();
     
     // 세션 확인
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !session) {
       console.log('No Supabase session found');
-      return NextResponse.json(
-        { error: 'No session found' },
-        { status: 401 }
-      );
+      return createAuthErrorResponse('No session found');
     }
 
     console.log('Supabase session found for user:', session.user.id);
@@ -30,10 +27,7 @@ export async function GET(request: NextRequest) {
 
     if (profileError || !userProfile || userProfile.type !== 'ADMIN') {
       console.log('User not admin:', { userId: session.user.id, type: userProfile?.type });
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
+      return createForbiddenResponse('Admin access required');
     }
 
     console.log('Admin user authenticated successfully');

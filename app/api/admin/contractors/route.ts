@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { createClient } from '@/utils/supabase/server';
+import { createSupabaseClient } from '@/utils/supabase/api';
 
 export async function POST(request: NextRequest) {
   try {
@@ -283,7 +283,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Supabase 클라이언트 생성
-    const supabase = await createClient();
+    const supabase = await createSupabaseClient();
     
     // 세션 확인
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();

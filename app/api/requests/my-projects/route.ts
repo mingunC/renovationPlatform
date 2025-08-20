@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createSupabaseClient, getAuthenticatedUser, createAuthErrorResponse } from '@/utils/supabase/api';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,17 +8,16 @@ export async function GET(request: NextRequest) {
     const additionalStatuses = searchParams.get('additionalStatuses')?.split(',') || []
 
     // Supabase 클라이언트 생성
-    const supabase = await createClient();
+    const supabase = await createSupabaseClient();
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+    const user = await getAuthenticatedUser(supabase);
+    if (!user) {
+      console.error('❌ Authentication failed');
+      return createAuthErrorResponse();
     }
+
+    console.log('✅ User authenticated:', user.id);
 
     // Get user profile to find customer ID
     const { data: userProfile, error: profileError } = await supabase

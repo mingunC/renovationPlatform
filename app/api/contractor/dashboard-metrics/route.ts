@@ -1,29 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createSupabaseClient, getAuthenticatedUser, createAuthErrorResponse, createNotFoundResponse } from '@/utils/supabase/api';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🚀 Dashboard metrics API called');
-    
     // Supabase 클라이언트 생성
-    const supabase = await createClient();
-
+    const supabase = await createSupabaseClient();
     console.log('✅ Supabase client created');
 
-    // 사용자 인증
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      console.error('❌ Authentication error:', authError);
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+    // 사용자 인증 확인
+    const user = await getAuthenticatedUser(supabase);
+    if (!user) {
+      console.error('❌ Authentication failed');
+      return createAuthErrorResponse();
     }
 
     console.log('✅ User authenticated:', user.id);
 
-    // 업체 프로필 조회
+    // 업체 프로필 확인
     const { data: contractor, error: contractorError } = await supabase
       .from('contractors')
       .select('id')
@@ -32,10 +25,7 @@ export async function GET(request: NextRequest) {
 
     if (contractorError || !contractor) {
       console.error('❌ Contractor profile error:', contractorError);
-      return NextResponse.json(
-        { error: 'Contractor profile not found' },
-        { status: 404 }
-      );
+      return createNotFoundResponse('Contractor profile not found');
     }
 
     console.log('✅ Contractor profile found:', contractor.id);
