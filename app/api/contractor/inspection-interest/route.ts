@@ -247,7 +247,6 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         will_participate,
-        notes,
         created_at,
         updated_at,
         request:renovation_requests(
@@ -271,22 +270,43 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (interestsError) {
-      console.error('Error fetching inspection interests:', interestsError);
+      console.error('❌ Error fetching inspection interests:', interestsError);
+      console.error('❌ Error details:', {
+        message: interestsError.message,
+        code: interestsError.code,
+        details: interestsError.details,
+        hint: interestsError.hint
+      });
       return NextResponse.json(
-        { error: 'Failed to fetch inspection interests' },
+        { 
+          error: 'Failed to fetch inspection interests',
+          details: interestsError.message,
+          code: interestsError.code
+        },
         { status: 500 }
       );
     }
+
+    console.log('✅ Successfully fetched inspection interests:', interests?.length || 0);
 
     return NextResponse.json({
       success: true,
       data: interests || []
     });
 
-  } catch (error) {
-    console.error('Inspection interests fetch error:', error);
+  } catch (error: any) {
+    console.error('💥 Inspection interests fetch error:', error);
+    console.error('💥 Error details:', {
+      message: error.message,
+      stack: error.stack,
+      type: error.constructor.name
+    });
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: error.message,
+        type: error.constructor.name
+      },
       { status: 500 }
     );
   }
