@@ -71,7 +71,7 @@ export default function ContractorParticipationPage() {
   const [selectedContractor, setSelectedContractor] = useState<Contractor | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [verificationFilter, setVerificationFilter] = useState<string>('')
+  const [verificationFilter, setVerificationFilter] = useState<string>('all')
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   useEffect(() => {
@@ -166,7 +166,7 @@ export default function ContractorParticipationPage() {
     
     const matchesCategory = categoryFilter === 'all' || contractor.categories.includes(categoryFilter)
     
-    const matchesVerification = !verificationFilter || 
+    const matchesVerification = verificationFilter === 'all' || 
       (verificationFilter === 'verified' && contractor.insurance_verified && contractor.wsib_verified) ||
       (verificationFilter === 'partial' && (contractor.insurance_verified || contractor.wsib_verified)) ||
       (verificationFilter === 'unverified' && !contractor.insurance_verified && !contractor.wsib_verified)
@@ -312,7 +312,7 @@ export default function ContractorParticipationPage() {
                   <SelectValue placeholder="모든 상태" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">모든 상태</SelectItem>
+                  <SelectItem value="all">모든 상태</SelectItem>
                   <SelectItem value="verified">완전 인증</SelectItem>
                   <SelectItem value="partial">부분 인증</SelectItem>
                   <SelectItem value="unverified">미인증</SelectItem>
