@@ -3,6 +3,11 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { createSupabaseClient } from '@/utils/supabase/api';
 
+// 환경 변수 검증
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('Missing Supabase environment variables');
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log('=== Contractor API 호출 시작 ===')

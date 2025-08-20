@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseClient, createAuthErrorResponse, createForbiddenResponse } from '@/utils/supabase/api';
 
+// 환경 변수 검증
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('Missing Supabase environment variables');
+}
+
 export async function GET(request: NextRequest) {
   try {
     console.log('=== GET /api/admin/inspection-stats called ===');

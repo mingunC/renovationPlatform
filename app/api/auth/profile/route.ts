@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseClient, createErrorResponse } from '@/utils/supabase/api';
 
+// 환경 변수 검증
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('Missing Supabase environment variables');
+}
+
 // GET: 사용자 프로필 조회
 export async function GET(request: NextRequest) {
   console.log('🚀 GET /api/auth/profile called');

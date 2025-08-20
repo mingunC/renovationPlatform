@@ -2,6 +2,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseClient, getAuthenticatedUser, createAuthErrorResponse, createNotFoundResponse } from '@/utils/supabase/api';
 
+// 환경 변수 검증
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('Missing Supabase environment variables');
+}
+
 export async function POST(request: NextRequest) {
   console.log('🚀 POST /api/contractor/inspection-interest called');
   
