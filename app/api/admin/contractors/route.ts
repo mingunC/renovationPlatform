@@ -328,26 +328,46 @@ export async function GET(request: NextRequest) {
     }
 
     // 모든 업체 목록 조회
-    const contractors = await prisma.contractor.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            type: true,
-            created_at: true
-          }
-        }
-      },
-      orderBy: {
-        created_at: 'desc'
-      }
-    })
+    const { data: contractors, error: contractorsError } = await supabase
+      .from('contractors')
+      .select(`
+        id,
+        business_name,
+        business_number,
+        phone,
+        service_areas,
+        categories,
+        rating,
+        review_count,
+        profile_completed,
+        completion_percentage,
+        insurance_verified,
+        wsib_verified,
+        created_at,
+        onboarding_completed_at,
+        user:users!contractors_user_id_fkey(
+          id,
+          email,
+          name,
+          type,
+          created_at
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (contractorsError) {
+      console.error('❌ Error fetching contractors:', contractorsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch contractors' },
+        { status: 500 }
+      );
+    }
+
+    console.log(`✅ Found ${contractors?.length || 0} contractors`);
 
     return NextResponse.json({
       success: true,
-      contractors
+      contractors: contractors || []
     })
 
   } catch (error) {
