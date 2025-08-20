@@ -83,13 +83,23 @@ export async function POST(request: NextRequest) {
   console.log('🚀 POST /api/auth/profile called');
   
   try {
-    const { id, email, name, type = 'CUSTOMER' } = await request.json();
+    const { id, email, name, type } = await request.json();
     console.log('📝 Request data:', { id, email, name, type });
 
     if (!id || !email) {
       console.error('❌ Missing required fields:', { id, email });
       return Response.json({ 
         error: 'ID and email are required' 
+      }, { status: 400 });
+    }
+
+    // UUID 형식 검증
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      console.error('❌ Invalid UUID format:', id);
+      return Response.json({ 
+        error: 'Invalid UUID format for ID',
+        details: `Provided ID "${id}" is not a valid UUID`
       }, { status: 400 });
     }
 
@@ -142,14 +152,24 @@ export async function POST(request: NextRequest) {
         type: existingUserByEmail.type 
       });
       // 기존 사용자가 있으면 ID 업데이트 (Supabase ID 변경 대응)
+      // 기존 타입은 보존하고, 새로운 타입이 제공된 경우에만 업데이트
+      const updateData: any = {
+        id: id, // 새로운 Supabase ID로 업데이트
+        name: name || existingUserByEmail.name,
+        updated_at: new Date().toISOString()
+      };
+      
+      // type이 제공되고 기존 타입과 다른 경우에만 업데이트
+      if (type && type !== existingUserByEmail.type) {
+        console.log(`🔄 Updating user type from ${existingUserByEmail.type} to ${type}`);
+        updateData.type = type;
+      } else {
+        console.log(`✅ Preserving existing user type: ${existingUserByEmail.type}`);
+      }
+      
       const { data: updatedUser, error: updateError } = await supabase
         .from('users')
-        .update({
-          id: id, // 새로운 Supabase ID로 업데이트
-          name: name || existingUserByEmail.name,
-          type: type || existingUserByEmail.type, // type도 업데이트
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', existingUserByEmail.id)
         .select()
         .single();
@@ -163,14 +183,17 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Updated existing user: ${email} with new ID: ${id}, type: ${user.type}`);
     } else {
       console.log('🆕 No existing user found, creating new user...');
-      // 새 사용자 생성
+      // 새 사용자 생성 - type이 제공되지 않으면 기본값 설정
+      const userType = type || 'CUSTOMER'; // 기본값은 CUSTOMER
+      console.log(`🆕 Creating new user with type: ${userType}`);
+      
       const { data: newUser, error: createError } = await supabase
         .from('users')
         .insert({
           id,
           email,
           name: name || 'Unknown',
-          type,
+          type: userType,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -211,10 +234,18 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('❌ User profile error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error type:', error.constructor.name);
+    console.error('Error details:', {
+      message: error.message,
+      cause: error.cause,
+      code: error.code
+    });
 
     return Response.json({
       error: 'Failed to handle user profile',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      errorType: process.env.NODE_ENV === 'development' ? error.constructor.name : undefined
     }, { status: 500 });
   }
 }

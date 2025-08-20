@@ -84,7 +84,17 @@ export function Header() {
           setUserProfile(data.user); // Database profile
         } else {
           const errorData = await response.json();
-          console.error('❌ Profile processing failed:', response.status, errorData);
+          console.error('❌ Profile processing failed:', {
+            status: response.status,
+            statusText: response.statusText,
+            errorData,
+            requestData: { userId, userEmail, userName }
+          });
+          
+          // UUID 형식 에러인 경우 특별 처리
+          if (errorData.error?.includes('UUID')) {
+            console.error('🔍 UUID format issue detected:', userId);
+          }
           
           // 실패해도 기본 사용자 정보는 설정
           setUser(session.user);

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 // GET: 현장방문 일정 확정이 필요한 요청들 조회
 export async function GET(request: NextRequest) {
   try {
+    console.log('🚀 GET /api/admin/schedule-inspection called');
+    
     // Supabase 클라이언트 생성
     const cookieStore = await cookies();
     const supabase = createServerClient(
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !session) {
+      console.error('❌ No session found');
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -49,105 +51,104 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (profileError || !userProfile || userProfile.type !== 'ADMIN') {
+      console.error('❌ User not admin:', { userId: session.user.id, type: userProfile?.type });
       return NextResponse.json(
         { error: 'Admin access required' },
         { status: 403 }
       );
     }
 
+    console.log('✅ Admin user authenticated');
+
     // 쿼리 파라미터에서 status 확인
     const { searchParams } = new URL(request.url);
     const requestedStatus = searchParams.get('status');
     
-    console.log('Requested status filter:', requestedStatus);
+    console.log('📝 Requested status filter:', requestedStatus);
 
-    // 현장방문 일정 확정이 필요한 요청들 조회
-    // 기본적으로 INSPECTION_PENDING, INSPECTION_SCHEDULED, OPEN 상태의 프로젝트들
-    let whereCondition: any = {};
+    // 기본 쿼리 구성
+    let query = supabase
+      .from('renovation_requests')
+      .select(`
+        id,
+        status,
+        category,
+        budget_range,
+        address,
+        description,
+        created_at,
+        inspection_date,
+        inspection_time,
+        customer:users!renovation_requests_customer_id_fkey(
+          id,
+          name,
+          email
+        ),
+        inspection_interests(
+          id,
+          will_participate,
+          contractor:contractors(
+            id,
+            business_name
+          )
+        )
+      `);
 
-    // status 필터가 있으면 적용
+    // status 필터 적용
     if (requestedStatus && requestedStatus !== 'all') {
-      whereCondition.status = requestedStatus;
+      query = query.eq('status', requestedStatus);
     } else {
       // 기본값: INSPECTION_PENDING, INSPECTION_SCHEDULED, OPEN 상태
-      whereCondition.status = {
-        in: ['INSPECTION_PENDING', 'INSPECTION_SCHEDULED', 'OPEN']
-      };
+      query = query.in('status', ['INSPECTION_PENDING', 'INSPECTION_SCHEDULED', 'OPEN']);
     }
 
-    const pendingRequests = await prisma.renovationRequest.findMany({
-      where: whereCondition,
-      include: {
-        customer: {
-          select: {
-            name: true,
-            email: true
-          }
-        },
-        inspection_interests: {
-          include: {
-            contractor: {
-              select: {
-                business_name: true
-              }
-            }
-          }
-        },
-        _count: {
-          select: {
-            inspection_interests: true
-          }
-        }
-      },
-      orderBy: {
-        created_at: 'desc'
-      }
-    });
+    // 프로젝트 요청 조회
+    const { data: pendingRequests, error: requestsError } = await query
+      .order('created_at', { ascending: false });
 
-    // 응답 데이터 구조화
-    const formattedRequests = pendingRequests.map(request => ({
+    if (requestsError) {
+      console.error('❌ Error fetching requests:', requestsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch requests' },
+        { status: 500 }
+      );
+    }
+
+    console.log(`✅ Found ${pendingRequests?.length || 0} requests`);
+
+    // 응답 데이터 구조 변환
+    const formattedRequests = pendingRequests?.map(request => ({
       id: request.id,
-      category: request.category,
-      property_type: request.property_type || 'Unknown',
-      budget_range: request.budget_range,
-      timeline: request.timeline || 'Unknown',
-      address: request.address,
-      postal_code: request.postal_code,
-      description: request.description,
       status: request.status,
-      created_at: request.created_at.toISOString(),
-      inspection_date: request.inspection_date?.toISOString(),
+      category: request.category,
+      budget_range: request.budget_range,
+      address: request.address,
+      description: request.description,
+      created_at: request.created_at,
+      inspection_date: request.inspection_date,
       inspection_time: request.inspection_time,
-      inspection_notes: request.inspection_notes,
-      customer: {
-        name: request.customer.name,
-        email: request.customer.email
-      },
-      inspection_interests: request.inspection_interests.map(interest => ({
-        contractor: {
-          user: {
-            name: 'Unknown' // contractor.user.name이 없으므로 기본값 설정
-          },
-          company_name: interest.contractor.business_name
-        },
-        will_participate: interest.will_participate,
-        created_at: interest.created_at.toISOString()
-      })),
+      customer: request.customer,
+      inspection_interests: request.inspection_interests || [],
       _count: {
-        bids: request._count.inspection_interests
+        inspection_interests: request.inspection_interests?.length || 0
       }
-    }));
+    })) || [];
 
     return NextResponse.json({
       success: true,
-      data: formattedRequests,
-      total: formattedRequests.length
+      requests: formattedRequests
     });
 
-  } catch (error) {
-    console.error('Error fetching pending inspection requests:', error);
+  } catch (error: any) {
+    console.error('❌ Schedule inspection API error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      type: error.constructor.name
+    });
+    
     return NextResponse.json(
-      { error: 'Failed to fetch inspection requests' },
+      { error: 'Failed to fetch inspection requests', details: error.message },
       { status: 500 }
     );
   }
@@ -216,31 +217,34 @@ export async function POST(request: NextRequest) {
     }
 
     // 요청 상태를 INSPECTION_SCHEDULED로 변경
-    const updatedRequest = await prisma.renovationRequest.update({
-      where: { id: request_id },
-      data: {
-        status: 'INSPECTION_SCHEDULED',
-        inspection_date: new Date(inspection_date),
-        inspection_time: inspection_time || null,
-        inspection_notes: notes || null,
-        updated_at: new Date()
-      },
-      include: {
-        customer: true,
-        inspection_interests: {
-          where: {
-            will_participate: true
-          },
-          include: {
-            contractor: true
-          }
+    const updatedRequest = await supabase
+      .from('renovation_requests')
+      .update({
+        where: { id: request_id },
+        data: {
+          status: 'INSPECTION_SCHEDULED',
+          inspection_date: new Date(inspection_date),
+          inspection_time: inspection_time || null,
+          inspection_notes: notes || null,
+          updated_at: new Date()
         }
-      }
-    });
+      })
+      .select()
+      .single();
+
+    if (updatedRequest.error) {
+      console.error('❌ Error updating request:', updatedRequest.error);
+      return NextResponse.json(
+        { error: 'Failed to update request' },
+        { status: 500 }
+      );
+    }
+
+    const updatedRequestData = updatedRequest.data;
 
     // TODO: 참여 업체들에게 알림 발송 (이메일, SMS 등)
     if (notify_contractors) {
-      console.log(`📧 Notifying ${updatedRequest.inspection_interests.length} contractors about scheduled inspection`);
+      console.log(`📧 Notifying ${updatedRequestData.inspection_interests?.length || 0} contractors about scheduled inspection`);
       // 실제 알림 발송 로직 구현 필요
     }
 
@@ -248,18 +252,24 @@ export async function POST(request: NextRequest) {
       success: true,
       message: '현장방문 일정이 성공적으로 확정되었습니다.',
       data: {
-        id: updatedRequest.id,
-        status: updatedRequest.status,
-        inspection_date: updatedRequest.inspection_date,
-        customer_name: updatedRequest.customer.name,
-        participant_count: updatedRequest.inspection_interests.length
+        id: updatedRequestData.id,
+        status: updatedRequestData.status,
+        inspection_date: updatedRequestData.inspection_date,
+        customer_name: updatedRequestData.customer?.name,
+        participant_count: updatedRequestData.inspection_interests?.length || 0
       }
     });
 
-  } catch (error) {
-    console.error('Error scheduling inspection:', error);
+  } catch (error: any) {
+    console.error('❌ Schedule inspection API error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      type: error.constructor.name
+    });
+    
     return NextResponse.json(
-      { error: 'Failed to schedule inspection' },
+      { error: 'Failed to schedule inspection', details: error.message },
       { status: 500 }
     );
   }

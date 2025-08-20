@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
@@ -80,71 +79,75 @@ export async function GET(request: NextRequest) {
 
     console.log('Date ranges:', { today: today.toISOString(), thisWeekStart: thisWeekStart.toISOString(), thisWeekEnd: thisWeekEnd.toISOString() });
 
-    // 통계 계산
+    // 통계 계산 - Supabase 사용
     const [
-      totalPending,
-      scheduledToday,
-      scheduledThisWeek,
-      totalContractorsInterested
+      totalPendingResult,
+      scheduledTodayResult,
+      scheduledThisWeekResult,
+      totalContractorsInterestedResult
     ] = await Promise.all([
       // 현장 방문 대기 중인 프로젝트 수
-      prisma.renovationRequest.count({
-        where: { status: 'INSPECTION_PENDING' }
-      }),
+      supabase
+        .from('renovation_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'INSPECTION_PENDING'),
       
       // 오늘 현장 방문 일정이 있는 프로젝트 수
-      prisma.renovationRequest.count({
-        where: {
-          status: 'INSPECTION_SCHEDULED',
-          inspection_date: {
-            gte: today.toISOString(),
-            lt: new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString()
-          }
-        }
-      }),
+      supabase
+        .from('renovation_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'INSPECTION_SCHEDULED')
+        .gte('inspection_date', today.toISOString())
+        .lt('inspection_date', new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString()),
       
       // 이번 주 현장 방문 일정이 있는 프로젝트 수
-      prisma.renovationRequest.count({
-        where: {
-          status: 'INSPECTION_SCHEDULED',
-          inspection_date: {
-            gte: thisWeekStart.toISOString(),
-            lte: thisWeekEnd.toISOString()
-          }
-        }
-      }),
+      supabase
+        .from('renovation_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'INSPECTION_SCHEDULED')
+        .gte('inspection_date', thisWeekStart.toISOString())
+        .lte('inspection_date', thisWeekEnd.toISOString()),
       
-      // 현장 방문에 참여 희망하는 업체 수
-      prisma.inspectionInterest.count({
-        where: { will_participate: true }
-      })
+      // 현장 방문에 관심을 보인 업체 수
+      supabase
+        .from('inspection_interests')
+        .select('*', { count: 'exact', head: true })
+        .eq('will_participate', true)
     ]);
 
-    console.log('Calculated stats:', {
+    // 결과 추출
+    const totalPending = totalPendingResult.count || 0;
+    const scheduledToday = scheduledTodayResult.count || 0;
+    const scheduledThisWeek = scheduledThisWeekResult.count || 0;
+    const totalContractorsInterested = totalContractorsInterestedResult.count || 0;
+
+    console.log('Stats calculated:', {
       totalPending,
       scheduledToday,
       scheduledThisWeek,
       totalContractorsInterested
     });
-
-    const stats = {
-      total_pending: totalPending,
-      scheduled_today: scheduledToday,
-      scheduled_this_week: scheduledThisWeek,
-      total_contractors_interested: totalContractorsInterested
-    };
-
-    console.log('Returning inspection stats:', stats);
 
     return NextResponse.json({
       success: true,
-      stats
+      stats: {
+        totalPending,
+        scheduledToday,
+        scheduledThisWeek,
+        totalContractorsInterested
+      }
     });
 
-  } catch (error) {
-    console.error('Admin inspection stats fetch error:', error);
+  } catch (error: any) {
+    console.error('❌ Inspection stats API error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      type: error.constructor.name
+    });
+    
     return NextResponse.json(
-      { error: 'Failed to fetch inspection stats', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to fetch inspection stats', details: error.message },
       { status: 500 }
     );
   }
