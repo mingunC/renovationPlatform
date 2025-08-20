@@ -70,7 +70,7 @@ export default function ContractorParticipationPage() {
   const [loading, setLoading] = useState(true)
   const [selectedContractor, setSelectedContractor] = useState<Contractor | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState<string>('')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [verificationFilter, setVerificationFilter] = useState<string>('')
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
@@ -164,7 +164,7 @@ export default function ContractorParticipationPage() {
       contractor.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contractor.user.email.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesCategory = !categoryFilter || contractor.categories.includes(categoryFilter)
+    const matchesCategory = categoryFilter === 'all' || contractor.categories.includes(categoryFilter)
     
     const matchesVerification = !verificationFilter || 
       (verificationFilter === 'verified' && contractor.insurance_verified && contractor.wsib_verified) ||
@@ -288,7 +288,7 @@ export default function ContractorParticipationPage() {
                   <SelectValue placeholder="모든 카테고리" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">모든 카테고리</SelectItem>
+                  <SelectItem value="all">모든 카테고리</SelectItem>
                   <SelectItem value="Kitchen Renovation">Kitchen Renovation</SelectItem>
                   <SelectItem value="Bathroom Renovation">Bathroom Renovation</SelectItem>
                   <SelectItem value="Basement Renovation">Basement Renovation</SelectItem>
