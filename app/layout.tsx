@@ -1,33 +1,16 @@
-import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Header } from '@/components/layout/header'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+// 방금 만든 Providers 컴포넌트를 import 합니다.
+import Providers from './providers'
 
 const inter = Inter({ subsets: ['latin'] })
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://renovateplatform.com'
-
-export const metadata: Metadata = {
-  title: {
-    default: 'Renovate Platform - Connect with Trusted Contractors in the GTA',
-    template: '%s | Renovate Platform'
-  },
-  description: 'Find verified contractors for your home renovation projects in the Greater Toronto Area. Get competitive bids, compare proposals, and hire with confidence.',
-  keywords: [
-    'home renovation',
-    'contractors',
-    'GTA contractors',
-    'Toronto renovation',
-    'kitchen renovation',
-    'bathroom renovation',
-    'basement finishing',
-    'home improvement',
-    'contractor bids',
-    'verified contractors'
-  ],
-  authors: [{ name: 'Renovate Platform Team' }],
+export const metadata = {
+  title: '리노베이트 플랫폼',
+  description: '전문적인 리노베이션 서비스를 위한 플랫폼',
+  keywords: '리노베이션, 인테리어, 건설, 업체',
+  authors: [{ name: 'Renovate Platform' }],
   creator: 'Renovate Platform',
   publisher: 'Renovate Platform',
   formatDetection: {
@@ -35,31 +18,31 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL('https://renovate-platform.com'),
   alternates: {
-    canonical: siteUrl,
+    canonical: '/',
   },
   openGraph: {
-    type: 'website',
-    locale: 'en_CA',
-    url: siteUrl,
-    siteName: 'Renovate Platform',
-    title: 'Renovate Platform - Connect with Trusted Contractors in the GTA',
-    description: 'Find verified contractors for your home renovation projects in the Greater Toronto Area. Get competitive bids, compare proposals, and hire with confidence.',
+    title: '리노베이트 플랫폼',
+    description: '전문적인 리노베이션 서비스를 위한 플랫폼',
+    url: 'https://renovate-platform.com',
+    siteName: '리노베이트 플랫폼',
     images: [
       {
-        url: `${siteUrl}/og-image.png`,
+        url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Renovate Platform - Trusted Home Renovation Contractors',
+        alt: '리노베이트 플랫폼',
       },
     ],
+    locale: 'ko_KR',
+    type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Renovate Platform - Connect with Trusted Contractors',
-    description: 'Find verified contractors for your home renovation projects in the GTA.',
-    images: [`${siteUrl}/twitter-image.png`],
+    title: '리노베이트 플랫폼',
+    description: '전문적인 리노베이션 서비스를 위한 플랫폼',
+    images: ['/og-image.jpg'],
   },
   robots: {
     index: true,
@@ -72,29 +55,11 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  category: 'Home Improvement',
-  manifest: `${siteUrl}/manifest.json`,
-}
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 5,
-  userScalable: true,
+  verification: {
+    google: 'your-google-verification-code',
+  },
   themeColor: '#2563eb',
 }
-
-// React Query 클라이언트 생성
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5분
-      cacheTime: 10 * 60 * 1000, // 10분
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-})
 
 export default function RootLayout({
   children,
@@ -102,23 +67,27 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ko" className="scroll-smooth" data-scroll-behavior="smooth">
+    <html lang="ko">
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#2563eb" />
+        <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Renovate Platform" />
       </head>
       <body className={`${inter.className} antialiased min-h-screen bg-white`}>
-        <QueryClientProvider client={queryClient}>
+        {/*
+          QueryClientProvider 대신 새로 만든 Providers 컴포넌트로 감싸줍니다.
+          이렇게 하면 QueryClient 인스턴스 생성과 Provider 사용이 모두
+          "use client" 경계 안에서 안전하게 처리됩니다.
+        */}
+        <Providers>
           <Header />
           <main className="min-h-screen">
             {children}
-            <ReactQueryDevtools initialIsOpen={false} />
           </main>
-        </QueryClientProvider>
+        </Providers>
       </body>
     </html>
   )
