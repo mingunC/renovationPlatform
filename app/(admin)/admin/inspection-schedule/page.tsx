@@ -3,12 +3,9 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import { 
   Calendar,
   Clock,
@@ -20,7 +17,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Eye,
-  Edit
+  X
 } from 'lucide-react'
 
 interface InspectionRequest {
@@ -70,11 +67,7 @@ export default function InspectionSchedulePage() {
   const [loading, setLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<InspectionRequest | null>(null)
-  const [showScheduleModal, setShowScheduleModal] = useState(false)
-  const [scheduleForm, setScheduleForm] = useState({
-    inspection_date: '',
-    notes: ''
-  })
+  const [showDetailModal, setShowDetailModal] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [filterStatus, setFilterStatus] = useState('INSPECTION_PENDING')
 
@@ -98,51 +91,43 @@ export default function InspectionSchedulePage() {
           'Content-Type': 'application/json',
         }
       })
-      console.log('Auth check response status:', response.status)
-      
+
       if (response.ok) {
-        const userData = await response.json()
-        if (userData.success && userData.user) {
-          console.log('Admin user authenticated:', userData.user)
-          setIsAuthenticated(true)
-        } else {
-          console.error('Invalid admin session data:', userData)
-          setMessage({ type: 'error', text: '관리자 인증이 필요합니다. 다시 로그인해주세요.' })
-        }
+        setIsAuthenticated(true)
+        console.log('Admin authentication successful')
       } else {
-        console.error('Admin session check failed:', response.status)
-        setMessage({ type: 'error', text: '관리자 인증이 필요합니다. 다시 로그인해주세요.' })
+        console.log('Admin authentication failed')
+        setIsAuthenticated(false)
       }
     } catch (error) {
-      console.error('Auth check failed:', error)
-      setMessage({ type: 'error', text: '인증 확인 중 오류가 발생했습니다.' })
+      console.error('Admin authentication error:', error)
+      setIsAuthenticated(false)
     }
   }
 
   const fetchInspectionRequests = async () => {
     try {
       setLoading(true)
-      console.log('Fetching inspection requests...')
       const response = await fetch(`/api/admin/schedule-inspection?status=${filterStatus}`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         }
       })
+
       console.log('Inspection requests API response status:', response.status)
-      
+
       if (response.ok) {
         const data = await response.json()
         console.log('Inspection requests data:', data)
-        setRequests(data.data || [])
+        setRequests(data.requests || [])
       } else {
-        const errorData = await response.json().catch(() => ({}))
-        console.error('Failed to fetch inspection requests:', response.status, errorData)
-        setMessage({ type: 'error', text: `현장 방문 요청을 불러오는데 실패했습니다: ${response.status}` })
+        console.error('Failed to fetch inspection requests:', response.status)
+        setMessage({ type: 'error', text: '현장 방문 요청을 불러오는데 실패했습니다.' })
       }
     } catch (error) {
-      console.error('Error fetching inspection requests:', error)
-      setMessage({ type: 'error', text: '현장 방문 요청을 불러오는 중 오류가 발생했습니다.' })
+      console.error('Failed to fetch inspection requests:', error)
+      setMessage({ type: 'error', text: '현장 방문 요청을 불러오는데 실패했습니다.' })
     } finally {
       setLoading(false)
     }
@@ -150,184 +135,196 @@ export default function InspectionSchedulePage() {
 
   const fetchInspectionStats = async () => {
     try {
-      console.log('Fetching inspection stats...')
       const response = await fetch('/api/admin/inspection-stats', {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         }
       })
+
       console.log('Inspection stats API response status:', response.status)
-      
+
       if (response.ok) {
         const data = await response.json()
         console.log('Inspection stats data:', data)
         setStats(data.stats)
       } else {
-        const errorData = await response.json().catch(() => ({}))
-        console.error('Failed to fetch inspection stats:', response.status, errorData)
+        console.error('Failed to fetch inspection stats:', response.status)
       }
     } catch (error) {
-      console.error('Error fetching inspection stats:', error)
+      console.error('Failed to fetch inspection stats:', error)
     }
   }
 
-  const handleScheduleInspection = async (requestId: string) => {
-    try {
-      console.log(`Scheduling inspection for request ${requestId}`)
-      const response = await fetch(`/api/admin/requests/${requestId}/set-inspection-date`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(scheduleForm)
-      })
+  const openDetailModal = (request: InspectionRequest) => {
+    setSelectedRequest(request)
+    setShowDetailModal(true)
+  }
 
-      if (response.ok) {
-        const data = await response.json()
-        console.log('Inspection scheduled successfully:', data)
-        setMessage({ type: 'success', text: '현장 방문 일정이 설정되었습니다.' })
-        setShowScheduleModal(false)
-        setSelectedRequest(null)
-        setScheduleForm({ inspection_date: '', notes: '' })
-        fetchInspectionRequests() // 목록 새로고침
-        fetchInspectionStats() // 통계 새로고침
-      } else {
-        const errorData = await response.json()
-        console.error('Failed to schedule inspection:', errorData)
-        setMessage({ type: 'error', text: errorData.error || '현장 방문 일정 설정에 실패했습니다.' })
-      }
-    } catch (error) {
-      console.error('Error scheduling inspection:', error)
-      setMessage({ type: 'error', text: '현장 방문 일정 설정 중 오류가 발생했습니다.' })
+  const closeDetailModal = () => {
+    setShowDetailModal(false)
+    setSelectedRequest(null)
+  }
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'OPEN':
+        return 'default'
+      case 'INSPECTION_PENDING':
+        return 'secondary'
+      case 'INSPECTION_SCHEDULED':
+        return 'outline'
+      default:
+        return 'default'
     }
   }
 
   const getStatusDisplayName = (status: string) => {
-    const statusMap: Record<string, string> = {
-      'INSPECTION_PENDING': '현장 방문 대기',
-      'INSPECTION_SCHEDULED': '현장 방문 일정 설정됨',
-      'BIDDING_OPEN': '입찰 진행중',
-      'BIDDING_CLOSED': '입찰 마감',
-      'CONTRACTOR_SELECTED': '업체 선정됨',
-      'COMPLETED': '완료',
-      'CLOSED': '종료'
+    switch (status) {
+      case 'OPEN':
+        return '신규 요청'
+      case 'INSPECTION_PENDING':
+        return '현장 방문 대기'
+      case 'INSPECTION_SCHEDULED':
+        return '현장 방문 일정 설정'
+      default:
+        return status
     }
-    return statusMap[status] || status
-  }
-
-  const getStatusBadgeVariant = (status: string) => {
-    const variantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      'INSPECTION_PENDING': 'secondary',
-      'INSPECTION_SCHEDULED': 'outline',
-      'BIDDING_OPEN': 'default',
-      'BIDDING_CLOSED': 'secondary',
-      'CONTRACTOR_SELECTED': 'outline',
-      'COMPLETED': 'default',
-      'CLOSED': 'destructive'
-    }
-    return variantMap[status] || 'default'
   }
 
   const getCategoryDisplayName = (category: string) => {
-    const categoryMap: Record<string, string> = {
-      'KITCHEN': '주방 리노베이션',
-      'BATHROOM': '욕실 리노베이션',
-      'BASEMENT': '지하실 리노베이션',
-      'FLOORING': '바닥재',
-      'PAINTING': '페인팅',
-      'OTHER': '기타',
-      'OFFICE': '사무실',
-      'RETAIL': '상업용',
-      'CAFE_RESTAURANT': '카페/레스토랑',
-      'EDUCATION': '교육시설',
-      'HOSPITALITY_HEALTHCARE': '호텔/의료시설'
+    switch (category) {
+      case 'KITCHEN':
+        return '주방'
+      case 'BATHROOM':
+        return '욕실'
+      case 'LIVING_ROOM':
+        return '거실'
+      case 'BEDROOM':
+        return '침실'
+      case 'BASEMENT':
+        return '지하실'
+      case 'ATTIC':
+        return '다락방'
+      case 'GARAGE':
+        return '차고'
+      case 'DECK':
+        return '데크'
+      case 'POOL':
+        return '수영장'
+      case 'LANDSCAPING':
+        return '조경'
+      case 'ROOFING':
+        return '지붕'
+      case 'WINDOWS':
+        return '창문'
+      case 'DOORS':
+        return '문'
+      case 'ELECTRICAL':
+        return '전기'
+      case 'PLUMBING':
+        return '배관'
+      case 'HVAC':
+        return '난방/냉방'
+      case 'PAINTING':
+        return '페인팅'
+      case 'FLOORING':
+        return '바닥재'
+      case 'OTHER':
+        return '기타'
+      default:
+        return category
     }
-    return categoryMap[category] || category
   }
 
-  const getBudgetRangeDisplay = (range: string) => {
-    const budgetMap: Record<string, string> = {
-      'UNDER_50K': '50만원 미만',
-      'RANGE_50_100K': '50만원 - 100만원',
-      'OVER_100K': '100만원 이상'
+  const getBudgetRangeDisplay = (budgetRange: string) => {
+    switch (budgetRange) {
+      case 'RANGE_10_25K':
+        return '1-2.5만 달러'
+      case 'RANGE_25_50K':
+        return '2.5-5만 달러'
+      case 'RANGE_50_100K':
+        return '5-10만 달러'
+      case 'RANGE_100_250K':
+        return '10-25만 달러'
+      case 'RANGE_250_500K':
+        return '25-50만 달러'
+      case 'RANGE_500K_1M':
+        return '50-100만 달러'
+      case 'RANGE_1M_PLUS':
+        return '100만 달러 이상'
+      default:
+        return budgetRange
     }
-    return budgetMap[range] || range
   }
 
   const getTimelineDisplay = (timeline: string) => {
-    const timelineMap: Record<string, string> = {
-      'ASAP': '즉시',
-      'WITHIN_1MONTH': '1개월 이내',
-      'WITHIN_3MONTHS': '3개월 이내',
-      'PLANNING': '계획 단계'
+    switch (timeline) {
+      case 'ASAP':
+        return '즉시'
+      case 'WITHIN_1MONTH':
+        return '1개월 이내'
+      case 'WITHIN_3MONTHS':
+        return '3개월 이내'
+      case 'WITHIN_6MONTHS':
+        return '6개월 이내'
+      case 'WITHIN_1YEAR':
+        return '1년 이내'
+      case 'FLEXIBLE':
+        return '유연함'
+      default:
+        return timeline
     }
-    return timelineMap[timeline] || timeline
   }
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return '미정'
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
-
-  const formatTime = (timeString: string) => {
-    if (!timeString) return '미정'
-    
+    if (!dateString) return '날짜 없음'
     try {
-      // 시간 문자열을 Date 객체로 변환
-      const [hours, minutes] = timeString.split(':').map(Number)
-      const date = new Date()
-      date.setHours(hours, minutes, 0, 0)
-      
-      // 한국어 형식으로 시간 표시
-      const formatter = new Intl.DateTimeFormat('ko-KR', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      })
-      
-      return formatter.format(date)
-    } catch (error) {
-      console.error('Time formatting error:', error)
-      return timeString
+      return new Date(dateString).toLocaleDateString('ko-KR')
+    } catch {
+      return '날짜 오류'
     }
   }
 
-  const openScheduleModal = (request: InspectionRequest) => {
-    setSelectedRequest(request)
-    setScheduleForm({
-      inspection_date: request.inspection_date || '',
-      notes: request.notes || ''
-    })
-    setShowScheduleModal(true)
+  const formatTime = (timeString: string) => {
+    if (!timeString) return '시간 없음'
+    try {
+      return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('ko-KR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch {
+      return '시간 오류'
+    }
   }
 
-  if (loading || !isAuthenticated) {
+  if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">
-            {!isAuthenticated ? '관리자 인증 확인 중...' : '현장 방문 데이터 로딩 중...'}
-          </p>
+          <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+          <h2 className="text-xl font-semibold mb-2">접근 권한이 없습니다</h2>
+          <p className="text-gray-600">관리자 계정으로 로그인해주세요.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <RefreshCw className="h-12 w-12 mx-auto mb-4 text-blue-500 animate-spin" />
+          <p>데이터를 불러오는 중...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* 페이지 헤더 */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">현장 방문 일정 관리</h1>
-          <p className="text-gray-600 mt-2">현장 방문 일정을 설정하고 관리합니다.</p>
-        </div>
+    <div className="container mx-auto px-4 py-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">현장 방문 일정 관리</h1>
         <Button onClick={fetchInspectionRequests} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />
           새로고침
@@ -336,68 +333,62 @@ export default function InspectionSchedulePage() {
 
       {/* 통계 카드 */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">{stats.total_pending}</div>
-              <div className="text-sm text-gray-600">방문 대기</div>
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="h-5 w-5 text-orange-500" />
+                <div>
+                  <p className="text-sm text-gray-600">대기 중</p>
+                  <p className="text-2xl font-bold">{stats.total_pending}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
+          
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">{stats.scheduled_today}</div>
-              <div className="text-sm text-gray-600">오늘 일정</div>
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-5 w-5 text-blue-500" />
+                <div>
+                  <p className="text-sm text-gray-600">오늘 방문</p>
+                  <p className="text-2xl font-bold">{stats.scheduled_today}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
+          
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-purple-600">{stats.scheduled_this_week}</div>
-              <div className="text-sm text-gray-600">이번 주 일정</div>
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-5 w-5 text-green-500" />
+                <div>
+                  <p className="text-sm text-gray-600">이번 주</p>
+                  <p className="text-2xl font-bold">{stats.scheduled_this_week}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
+          
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-orange-600">{stats.total_contractors_interested}</div>
-              <div className="text-sm text-gray-600">참여 희망 업체</div>
+              <div className="flex items-center space-x-2">
+                <Users className="h-5 w-5 text-purple-500" />
+                <div>
+                  <p className="text-sm text-gray-600">참여 업체</p>
+                  <p className="text-2xl font-bold">{stats.total_contractors_interested}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* 필터 */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center space-x-4">
-            <Label htmlFor="status-filter">상태별 필터</Label>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-64">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="INSPECTION_PENDING">현장 방문 대기</SelectItem>
-                <SelectItem value="INSPECTION_SCHEDULED">현장 방문 일정 설정됨</SelectItem>
-                <SelectItem value="BIDDING_OPEN">입찰 진행중</SelectItem>
-                <SelectItem value="BIDDING_CLOSED">입찰 마감</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 메시지 표시 */}
+      {/* 에러 메시지 */}
       {message && (
-        <Alert variant={message.type === 'success' ? 'default' : 'destructive'}>
-          <AlertDescription className="flex items-center justify-between">
-            <span>{message.text}</span>
-            {message.type === 'error' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.location.href = '/adminlogin'}
-              >
-                로그인 페이지로 이동
-              </Button>
-            )}
+        <Alert variant={message.type === 'error' ? 'destructive' : 'default'}>
+          <AlertDescription>
+            {message.text}
           </AlertDescription>
         </Alert>
       )}
@@ -408,18 +399,17 @@ export default function InspectionSchedulePage() {
           <CardTitle className="flex items-center justify-between">
             <span>현장 방문 요청 목록 ({requests.length}개)</span>
             <div className="flex items-center space-x-2">
-              <Label htmlFor="status-filter" className="text-sm">상태별 필터:</Label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  <SelectItem value="OPEN">신규 요청</SelectItem>
-                  <SelectItem value="INSPECTION_PENDING">현장 방문 대기</SelectItem>
-                  <SelectItem value="INSPECTION_SCHEDULED">현장 방문 일정 설정</SelectItem>
-                </SelectContent>
-              </Select>
+              <span className="text-sm text-gray-600">상태별 필터:</span>
+              <select 
+                value={filterStatus} 
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="border rounded px-3 py-1 text-sm"
+              >
+                <option value="all">전체</option>
+                <option value="OPEN">신규 요청</option>
+                <option value="INSPECTION_PENDING">현장 방문 대기</option>
+                <option value="INSPECTION_SCHEDULED">현장 방문 일정 설정</option>
+              </select>
             </div>
           </CardTitle>
         </CardHeader>
@@ -496,35 +486,12 @@ export default function InspectionSchedulePage() {
                   
                   {/* 액션 버튼 */}
                   <div className="flex flex-col space-y-2">
-                    {request.status === 'INSPECTION_PENDING' && (
-                      <Button
-                        onClick={() => openScheduleModal(request)}
-                        className="w-full"
-                      >
-                        <Calendar className="h-4 w-4 mr-2" />
-                        방문 일정 설정
-                      </Button>
-                    )}
-                    
-                    {request.status === 'INSPECTION_SCHEDULED' && (
-                      <div className="text-center">
-                        <Badge variant="outline" className="mb-2">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          일정 설정됨
-                        </Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openScheduleModal(request)}
-                          className="w-full"
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          일정 수정
-                        </Button>
-                      </div>
-                    )}
-                    
-                    <Button variant="outline" size="sm" className="w-full">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => openDetailModal(request)}
+                    >
                       <Eye className="h-4 w-4 mr-2" />
                       상세보기
                     </Button>
@@ -536,7 +503,7 @@ export default function InspectionSchedulePage() {
             {requests.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>현재 {filterStatus === 'INSPECTION_PENDING' ? '현장 방문 대기' : '일정이 설정된'} 프로젝트가 없습니다.</p>
+                <p>현장 방문 대기 또는 일정이 설정된 프로젝트가 없습니다.</p>
                 <p className="text-sm">필터를 변경하거나 새 프로젝트를 확인해보세요.</p>
               </div>
             )}
@@ -544,58 +511,110 @@ export default function InspectionSchedulePage() {
         </CardContent>
       </Card>
 
-      {/* 방문 일정 설정 모달 */}
-      {showScheduleModal && selectedRequest && (
+      {/* 상세보기 모달 */}
+      {showDetailModal && selectedRequest && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-4">현장 방문 일정 설정</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="inspection_date">방문 날짜</Label>
-                <Input
-                  id="inspection_date"
-                  type="date"
-                  value={scheduleForm.inspection_date}
-                  onChange={(e) => setScheduleForm(prev => ({ ...prev, inspection_date: e.target.value }))}
-                  required
-                />
-              </div>
-              
-              <div>
-                {/* 시간 입력 필드 제거 - 고객이 선택한 날짜만 사용 */}
-              </div>
-              
-              <div>
-                <Label htmlFor="notes">메모</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="방문 시 참고사항을 입력하세요"
-                  value={scheduleForm.notes}
-                  onChange={(e) => setScheduleForm(prev => ({ ...prev, notes: e.target.value }))}
-                  rows={3}
-                />
-              </div>
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">프로젝트 상세 정보</h3>
+              <Button variant="ghost" size="sm" onClick={closeDetailModal}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
             
-            <div className="flex space-x-2 mt-6">
-              <Button
-                onClick={() => handleScheduleInspection(selectedRequest.id)}
-                className="flex-1"
-                disabled={!scheduleForm.inspection_date}
-              >
-                일정 설정
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowScheduleModal(false)
-                  setSelectedRequest(null)
-                  setScheduleForm({ inspection_date: '', notes: '' })
-                }}
-                className="flex-1"
-              >
-                취소
+            <div className="space-y-4">
+              {/* 기본 정보 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">프로젝트 ID</Label>
+                  <p className="text-sm text-gray-900">{selectedRequest.id}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">상태</Label>
+                  <Badge variant={getStatusBadgeVariant(selectedRequest.status)}>
+                    {getStatusDisplayName(selectedRequest.status)}
+                  </Badge>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">카테고리</Label>
+                  <p className="text-sm text-gray-900">{getCategoryDisplayName(selectedRequest.category || 'Unknown')}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">예산 범위</Label>
+                  <p className="text-sm text-gray-900">{getBudgetRangeDisplay(selectedRequest.budget_range || 'Unknown')}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">타임라인</Label>
+                  <p className="text-sm text-gray-900">{getTimelineDisplay(selectedRequest.timeline || 'Unknown')}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">생성일</Label>
+                  <p className="text-sm text-gray-900">{formatDate(selectedRequest.created_at)}</p>
+                </div>
+              </div>
+
+              {/* 주소 */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">주소</Label>
+                <p className="text-sm text-gray-900">{selectedRequest.address || '주소 없음'}</p>
+              </div>
+
+              {/* 설명 */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">프로젝트 설명</Label>
+                <p className="text-sm text-gray-900 whitespace-pre-wrap">{selectedRequest.description || '설명 없음'}</p>
+              </div>
+
+              {/* 고객 정보 */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">고객 정보</Label>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-sm text-gray-900">이름: {selectedRequest.customer?.name || 'Unknown'}</p>
+                  <p className="text-sm text-gray-900">이메일: {selectedRequest.customer?.email || 'Unknown'}</p>
+                  <p className="text-sm text-gray-900">전화번호: {selectedRequest.customer?.phone || 'Unknown'}</p>
+                </div>
+              </div>
+
+              {/* 현장 방문 정보 */}
+              {(selectedRequest.inspection_date || selectedRequest.inspection_time || selectedRequest.notes) && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">현장 방문 정보</Label>
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    {selectedRequest.inspection_date && (
+                      <p className="text-sm text-gray-900">방문일: {formatDate(selectedRequest.inspection_date)}</p>
+                    )}
+                    {selectedRequest.inspection_time && (
+                      <p className="text-sm text-gray-900">방문시간: {formatTime(selectedRequest.inspection_time)}</p>
+                    )}
+                    {selectedRequest.notes && (
+                      <p className="text-sm text-gray-900">메모: {selectedRequest.notes}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 참여 희망 업체 */}
+              {selectedRequest.inspection_interests && selectedRequest.inspection_interests.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">참여 희망 업체 ({selectedRequest.inspection_interests.length}개)</Label>
+                  <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+                    {selectedRequest.inspection_interests.map((interest, index) => (
+                      <div key={index} className="border-b border-gray-200 pb-2 last:border-b-0">
+                        <p className="text-sm font-medium text-gray-900">{interest.contractor?.company_name || 'Unknown'}</p>
+                        <p className="text-xs text-gray-600">담당자: {interest.contractor?.user?.name || 'Unknown'}</p>
+                        <p className="text-xs text-gray-600">이메일: {interest.contractor?.user?.email || 'Unknown'}</p>
+                        <p className="text-xs text-gray-600">참여 확정: {interest.will_participate ? '예' : '아니오'}</p>
+                        <p className="text-xs text-gray-600">등록일: {formatDate(interest.created_at)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end mt-6">
+              <Button onClick={closeDetailModal} variant="outline">
+                닫기
               </Button>
             </div>
           </div>
