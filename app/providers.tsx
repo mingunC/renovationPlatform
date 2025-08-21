@@ -5,6 +5,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState } from "react";
+import { AuthProvider } from "@/contexts/auth-context";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   // 컴포넌트가 리렌더링 되어도 QueryClient가 새로 생성되지 않도록 useState로 관리합니다.
@@ -21,8 +22,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
-      <ReactQueryDevtools initialIsOpen={false} />
+      <AuthProvider>
+        {children}
+        <ReactQueryDevtools initialIsOpen={false} />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

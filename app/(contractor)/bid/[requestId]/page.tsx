@@ -1,4 +1,4 @@
-import { Metadata } from 'next'
+import { Metadata, Viewport } from 'next'
 import { notFound } from 'next/navigation'
 import { BidSubmissionForm } from '@/components/forms/bid-submission-form'
 import { prisma } from '@/lib/prisma'
@@ -6,6 +6,15 @@ import { prisma } from '@/lib/prisma'
 export const metadata: Metadata = {
   title: 'Submit Bid | Renovate Platform - Contractors',
   description: 'Submit your bid for this renovation request',
+}
+
+export const viewport: Viewport = {
+  themeColor: '#2563eb',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  colorScheme: 'light dark'
 }
 
 interface BidPageProps {

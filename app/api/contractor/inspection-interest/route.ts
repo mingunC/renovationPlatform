@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const request_id = searchParams.get('request_id');
 
-    // 기본 쿼리 구성
+    // 기본 쿼리 구성 - customer 조인 제거하고 별도 조회
     let query = supabase
       .from('inspection_interests')
       .select(`
@@ -228,7 +228,8 @@ export async function GET(request: NextRequest) {
           budget_range,
           address,
           description,
-          status
+          status,
+          customer_id
         )
       `)
       .eq('contractor_id', contractor.id);
@@ -261,6 +262,44 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('✅ Successfully fetched inspection interests:', interests?.length || 0);
+
+    // customer 정보를 별도로 조회
+    if (interests && interests.length > 0) {
+      console.log('🔍 Fetching customer information for each request...');
+      
+      for (const interest of interests) {
+        if (interest.request && (interest.request as any).customer_id) {
+          try {
+            const { data: customer, error: customerError } = await supabase
+              .from('customers')
+              .select('id, name')
+              .eq('id', (interest.request as any).customer_id)
+              .single();
+            
+            if (customerError) {
+              console.warn(`⚠️ Customer fetch error for request ${(interest.request as any).id}:`, customerError.message);
+              // customer 정보가 없어도 계속 진행
+              (interest.request as any).customer = { 
+                id: (interest.request as any).customer_id, 
+                name: '고객명 없음' 
+              };
+            } else if (customer) {
+              console.log(`✅ Customer found for request ${(interest.request as any).id}:`, customer.name);
+              (interest.request as any).customer = customer;
+            }
+          } catch (error) {
+            console.warn(`⚠️ Customer fetch exception for request ${(interest.request as any).id}:`, error);
+            // 에러가 발생해도 기본값 설정
+            (interest.request as any).customer = { 
+              id: (interest.request as any).customer_id, 
+              name: '고객명 없음' 
+            };
+          }
+        }
+      }
+      
+      console.log('✅ Customer information fetching completed');
+    }
 
     return NextResponse.json({
       success: true,

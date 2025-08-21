@@ -58,7 +58,18 @@ export const metadata = {
   verification: {
     google: 'your-google-verification-code',
   },
-  themeColor: '#2563eb',
+}
+
+export const viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#2563eb' },
+    { media: '(prefers-color-scheme: dark)', color: '#1e40af' }
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  colorScheme: 'light dark'
 }
 
 export default function RootLayout({

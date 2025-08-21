@@ -1,9 +1,18 @@
-import { Metadata } from 'next'
+import { Metadata, Viewport } from 'next'
 import { MyBidsList } from '@/components/contractor/my-bids-list'
 
 export const metadata: Metadata = {
   title: 'My Bids | Renovate Platform - Contractors',
   description: 'Manage your submitted bids and track their status',
+}
+
+export const viewport: Viewport = {
+  themeColor: '#2563eb',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  colorScheme: 'light dark'
 }
 
 export default function MyBidsPage() {

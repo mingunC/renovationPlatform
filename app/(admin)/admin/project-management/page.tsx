@@ -34,11 +34,11 @@ interface Project {
   description: string
   status: string
   created_at: string
-  customer: {
+  customer?: {
     name: string
     email: string
   }
-  _count: {
+  _count?: {
     bids: number
   }
   inspection_date?: string
@@ -271,7 +271,7 @@ export default function ProjectManagementPage() {
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          project.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.customer.name.toLowerCase().includes(searchTerm.toLowerCase())
+                         (project.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || project.status === statusFilter
     const matchesCategory = categoryFilter === 'all' || project.category === categoryFilter
     
@@ -490,8 +490,8 @@ export default function ProjectManagementPage() {
                     </div>
                     
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <span>고객: {project.customer.name}</span>
-                      <span>입찰: {project._count.bids}개</span>
+                      <span>고객: {project.customer?.name || '고객명 없음'}</span>
+                      <span>입찰: {project._count?.bids || 0}개</span>
                       <span>생성일: {formatDate(project.created_at)}</span>
                       {project.inspection_date && (
                         <span>방문일: {formatDate(project.inspection_date)}</span>

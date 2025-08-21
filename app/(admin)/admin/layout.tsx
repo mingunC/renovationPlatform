@@ -69,6 +69,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { name: '현장 방문 일정', href: '/admin/inspection-schedule', icon: Calendar },
   ]
 
+  // 디버깅: navigation 배열 확인
+  console.log('navigation:', navigation);
+  navigation.forEach((item, index) => {
+    console.log(`navigation[${index}]:`, item);
+  });
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -101,14 +107,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </Button>
         </div>
         <nav className="mt-5 px-2">
-          {navigation.map((item) => (
+          {(navigation || []).map((item, index) => (
             <a
-              key={item.name}
-              href={item.href}
+              key={item?.name || `nav-${index}`}
+              href={item?.href || '#'}
               className="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50"
             >
-              <item.icon className="mr-4 h-6 w-6" />
-              {item.name}
+              {item?.icon && <item.icon className="mr-4 h-6 w-6" />}
+              {item?.name || '메뉴'}
             </a>
           ))}
         </nav>
@@ -121,14 +127,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <h1 className="text-lg font-semibold text-gray-900">관리자 패널</h1>
           </div>
           <nav className="mt-5 flex-1 px-2 space-y-1">
-            {navigation.map((item) => (
+            {(navigation || []).map((item, index) => (
               <a
-                key={item.name}
-                href={item.href}
+                key={item?.name || `nav-${index}`}
+                href={item?.href || '#'}
                 className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50"
               >
-                <item.icon className="mr-3 h-5 w-5" />
-                {item.name}
+                {item?.icon && <item.icon className="mr-3 h-5 w-5" />}
+                {item?.name || '메뉴'}
               </a>
             ))}
           </nav>

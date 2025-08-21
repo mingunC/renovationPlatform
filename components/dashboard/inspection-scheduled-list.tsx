@@ -17,7 +17,7 @@ interface InspectionRequest {
   inspection_time?: string
   notes?: string
   created_at: string
-  customer: {
+  customer?: {  // ? 추가로 optional 만들기
     name: string
   }
   inspection_interest?: {
@@ -85,6 +85,16 @@ export function InspectionScheduledList() {
           })))
           
           console.log('✅ Filtered participating requests:', participatingRequests)
+          
+          // customer 정보가 포함되었는지 확인
+          participatingRequests.forEach((request: any) => {
+            console.log(`Request ${request.id} customer info:`, {
+              hasCustomer: !!request.customer,
+              customerName: request.customer?.name,
+              customerId: request.customer?.id
+            });
+          });
+          
           setRequests(participatingRequests)
         } else {
           console.log('❌ API response structure invalid:', data)
@@ -282,6 +292,9 @@ export function InspectionScheduledList() {
 
       {/* 요청 목록 */}
       {requests.map((request) => {
+        // customer 정보 디버깅 (백엔드 API 수정 후 확인용)
+        console.log(`Request ${request.id} customer:`, request.customer);
+        
         const status = getInspectionStatus(request.inspection_date, request.inspection_interest)
         const canRespond = !request.inspection_interest && new Date(request.inspection_date) > new Date()
 
@@ -297,7 +310,7 @@ export function InspectionScheduledList() {
                       <h3 className="font-semibold text-lg text-gray-900">
                         {formatCategory(request.category)} 리노베이션
                       </h3>
-                      <p className="text-sm text-gray-600">by {request.customer.name}</p>
+                      <p className="text-sm text-gray-600">by {request.customer?.name || '고객명 없음'}</p>
                     </div>
                     <Badge variant="secondary" className={status.color}>
                       {status.icon} {status.text}
